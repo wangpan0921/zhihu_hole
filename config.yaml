@@ -1,0 +1,77 @@
+# 知乎树洞圈子自动发布系统配置
+
+zhihu:
+  # 树洞圈子地址
+  ring_url: "https://www.zhihu.com/ring/host/1939123142221100709?tab=new&tab_id=0"
+  # 登录态保存路径
+  storage_state: "data/auth/storage_state.json"
+
+# 微信读书：用于抓取指定书的章节正文做"读书感悟"型内容
+weread:
+  # 登录态保存路径（终端二维码扫一次后长期复用）
+  storage_state: "data/auth/weread_state.json"
+
+# 文案生成
+content:
+  # 内容模式：themes（主题池随机）/ book_reflection（按书章节顺序写读书感悟）
+  # book_reflection 失败时（如 index.json 缺失、章节摘要为空）会自动回退到 themes
+  mode: "book_reflection"
+  # provider: anthropic | openai (留空则按 .env 中已有的 key 自动选)
+  provider: "openai"
+  # anthropic 模型
+  anthropic_model: "claude-sonnet-4-5-20250929"
+  # openai 模型
+  openai_model: "gpt-5.2"
+  # 字数范围（知乎想法上限 ~1000 字）
+  # themes 模式建议 180-380；book_reflection 100-500，宁可短也不凑字数
+  min_chars: 100
+  max_chars: 500
+
+  # book_reflection 模式专用配置
+  book:
+    # 书 ID（自动用 data/books/<book_id>/index.json）
+    # 用 scripts/weread_index_book.py 索引完一本书后这里填对应 bookId
+    book_id: "3300144506"
+    # 跳过这些 chapterUid（除了自动跳过非正文章节外，再额外排除）
+    skip_chapter_uids: []
+    # 章节最小字数（小于此字数的章节视为非正文跳过，默认 800）
+    min_word_count: 800
+
+  # themes 模式的主题池：每次随机抽一个
+  themes:
+    - "在嘈杂世界里找到内心的安静"
+    - "孤独不是问题，独处是能力"
+    - "接纳自己的不完美"
+    - "把焦虑转化为行动力"
+    - "向内探索：看见真实的自己"
+    - "如何与负面情绪共处"
+    - "慢下来，才能听见自己"
+    - "成长不是变成别人，而是更像自己"
+    - "在不确定中安住"
+    - "重新定义成功与幸福"
+    - "断舍离：清理生活也清理心灵"
+    - "微小的坚持改变命运"
+    - "允许自己脆弱"
+    - "认知升级：从受害者到创造者"
+    - "把每一天活成第一天"
+
+# 配图
+image:
+  # 优先级：unsplash → openai（内部网关不出图，先走 Unsplash）
+  prefer: "unsplash"
+  openai_model: "dall-e-3"   # gpt-image-1 也可
+  size: "1024x1024"
+  style: "ethereal, peaceful, minimalist, soft natural light, dreamy atmosphere, no text, no people"
+
+# 发布调度
+schedule:
+  # 每天发布时刻（24h），cron 会按这些点触发
+  slots:
+    - { name: "morning", hour: 7,  minute: 0 }
+    - { name: "evening", hour: 18, minute: 0 }
+  # 每天预生成草稿到 pending/ 的时刻（生成的是「明天」的草稿，留出审核时间）
+  pre_generate:
+    hour: 19
+    minute: 0
+  # 发布时若 pending/ 没有当前 slot 的草稿是否现生现发
+  fallback_realtime: true

@@ -1,0 +1,32 @@
+# 环境
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 登录态 & 数据（含 Cookie / Token / 第三方版权内容）
+data/auth/
+data/pending/
+data/published/
+data/images/
+data/books/
+logs/
+
+# 调试截图
+debug/
+*.png
+!docs/*.png
