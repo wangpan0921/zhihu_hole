@@ -1,0 +1,30 @@
+#!/usr/bin/expect -f
+# 监控 kiro-cli chat：匹配到错误自动发送「继续」。
+# 用法: ./scripts/kiro-autocontinue.exp
+# 退出: Ctrl-C
+set timeout -1
+
+# 错误匹配（按实际报错文案增删）
+set pat "dispatch failed|Request failed|connection error|timed out|error sending request"
+# 连续重试上限，超过则停手交人工，避免无限循环烧额度
+set max_retry 5
+# 每次注入后冷却秒数（退避）
+set cooldown 3
+
+set retries 0
+
+spawn kiro-cli chat
+
+interact {
+    -o
+    -re $pat {
+        if {$retries >= $max_retry} {
+            send_user "\n\[autocontinue] 已达最大重试 $max_retry 次，停手，请人工介入。\n"
+        } else {
+            incr retries
+            send_user "\n\[autocontinue] 检测到错误，第 $retries 次自动发送『继续』\n"
+            sleep $cooldown
+            send "继续\r"
+        }
+    }
+}

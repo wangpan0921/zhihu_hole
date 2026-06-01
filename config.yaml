@@ -31,7 +31,7 @@ content:
   book:
     # 书 ID（自动用 data/books/<book_id>/index.json）
     # 用 scripts/weread_index_book.py 索引完一本书后这里填对应 bookId
-    book_id: "3300144506"
+    book_id: "3300199477"
     # 跳过这些 chapterUid（除了自动跳过非正文章节外，再额外排除）
     skip_chapter_uids: []
     # 章节最小字数（小于此字数的章节视为非正文跳过，默认 800）
