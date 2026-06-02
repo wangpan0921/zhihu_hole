@@ -30,3 +30,6 @@ logs/
 debug/
 *.png
 !docs/*.png
+
+# 构建/运行产物
+artifacts/

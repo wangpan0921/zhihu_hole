@@ -39,6 +39,15 @@ MAX_RETRY=10
 COOLDOWN=5         # 每次重试前等待秒数（退避）
 DEFAULT_PICK_N=10  # --pick 默认展示最近 N 个会话
 
+# 终端颜色：仅在 stdout 是 tty 时启用，避免污染日志/管道。
+if [[ -t 1 ]]; then
+  C_YELLOW=$'\033[1;33m'
+  C_RESET=$'\033[0m'
+else
+  C_YELLOW=""
+  C_RESET=""
+fi
+
 # 典型错误日志（按需新增）。匹配为不区分大小写、按子串。
 ERROR_PATTERNS=(
   "dispatch failure"
@@ -291,9 +300,9 @@ attempt=0
 while (( attempt < MAX_RETRY )); do
   attempt=$((attempt+1))
   if [[ -n "$TARGET_SESSION_ID" ]]; then
-    echo "[retry] 第 $attempt/$MAX_RETRY 次运行 agent=$AGENT_DESC (续跑 $TARGET_SESSION_ID)"
+    echo "${C_YELLOW}[retry] 第 $attempt/$MAX_RETRY 次运行 agent=$AGENT_DESC (续跑 $TARGET_SESSION_ID)${C_RESET}"
   else
-    echo "[retry] 第 $attempt/$MAX_RETRY 次运行 agent=$AGENT_DESC"
+    echo "${C_YELLOW}[retry] 第 $attempt/$MAX_RETRY 次运行 agent=$AGENT_DESC${C_RESET}"
   fi
   echo "[retry] ----- agent 输出开始 -----"
 
@@ -312,8 +321,14 @@ while (( attempt < MAX_RETRY )); do
   fi
 
   echo "[retry] 未检测到错误（退出码 $ec），结束。"
+  retries=$((attempt - 1))
+  if (( retries == 0 )); then
+    echo "[retry] 一次成功，无需重试。"
+  else
+    echo "[retry] 共运行 $attempt 次（重试了 $retries 次）后成功。"
+  fi
   exit "$ec"
 done
 
-echo "[retry] 已达最大重试 $MAX_RETRY 次仍报错，停手，请人工介入。" >&2
+echo "[retry] 已达最大重试 $MAX_RETRY 次仍报错，停手，请人工介入。（共运行 $attempt 次，重试了 $((attempt - 1)) 次）" >&2
 exit 1
