@@ -13,18 +13,53 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from .content_generator import generate_post
+from .content_generator import BookPoolFinished, generate_post, generate_from_theme
 from .image_generator import get_image
 from .utils import (
+    DATA_DIR,
     PENDING_DIR,
     PUBLISHED_DIR,
     get_logger,
     load_config,
     load_env,
 )
+from .zhihu_messenger import send_private_message
 from .zhihu_publisher import publish
 
 log = get_logger("scheduler")
+
+# 书籍池读完后，发私信通知的"已通知"标记，避免每个 slot 重复发
+_POOL_DONE_FLAG = DATA_DIR / "books" / ".pool_done_notified"
+
+
+def _notify_pool_finished() -> None:
+    """书籍池全部读完：给运营者发一条知乎私信（仅一次）。
+
+    用一个标记文件保证幂等。私信失败不影响后续内容发布，只记日志。
+    """
+    if _POOL_DONE_FLAG.exists():
+        log.info("书籍池已读完且此前已发过私信通知，跳过")
+        return
+
+    cfg = load_config()
+    book_cfg = (cfg.get("content", {}).get("book") or {})
+    msg = (
+        book_cfg.get("finish_message")
+        or "📚 书籍池里的书都读完啦，自动发布已回退到主题池模式。"
+        "想继续读新书的话，记得索引新书并更新 config.yaml 的 book_pool。"
+    )
+    try:
+        ok = send_private_message(msg)
+        if ok:
+            _POOL_DONE_FLAG.parent.mkdir(parents=True, exist_ok=True)
+            _POOL_DONE_FLAG.write_text(
+                dt.datetime.now().isoformat(timespec="seconds"), encoding="utf-8"
+            )
+            log.info("书籍池读完私信已发送，已写标记 %s", _POOL_DONE_FLAG)
+        else:
+            log.warning("书籍池读完，但未发送私信（可能未配置 notify_people_url）")
+    except Exception as e:  # noqa: BLE001
+        log.exception("发送'书籍池读完'私信失败（不影响发布）：%s", e)
 
 
 def _draft_path(date: dt.date, slot: str, *, base: Path = PENDING_DIR) -> Path:
@@ -52,7 +87,13 @@ def generate_one(slot: str, date: Optional[dt.date] = None) -> Path:
         log.info("草稿已存在，跳过生成：%s", out)
         return out
 
-    post = generate_post(slot=slot, date=date)
+    try:
+        post = generate_post(slot=slot, date=date)
+    except BookPoolFinished:
+        # 书籍池全部读完：发一次私信通知，然后回退到主题池继续产出内容。
+        log.info("书籍池已全部读完，触发私信通知并回退 themes 模式")
+        _notify_pool_finished()
+        post = generate_from_theme()
     try:
         img = get_image(post["image_prompt"])
         post["image_path"] = str(img)

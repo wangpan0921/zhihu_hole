@@ -222,30 +222,44 @@ content:
 `config.yaml` 里：
 
 ```yaml
+zhihu:
+  # 书籍池读完后发提醒私信的目标用户主页（运营者本人）。留空则跳过私信。
+  notify_people_url: "https://www.zhihu.com/people/<urlToken>"
+
 content:
   mode: "book_reflection"
   min_chars: 200
   max_chars: 500
   book:
-    book_id: "3300144506"      # 索引出的 bookId（看 index.json 文件名）
+    # 【书籍池】按顺序逐本读完。每个元素是索引出的 bookId（看 index.json 所在目录名）
+    book_pool:
+      - "3300144506"
+      - "3300199477"
+    finish_message: ""          # 书籍池读完时发的私信内容（留空用默认文案）
     skip_chapter_uids: []       # 额外想跳过的 chapterUid
     min_word_count: 800         # 字数小于此的章节视为非正文跳过
+    # 向后兼容：只读一本书时也可以不配 book_pool，只配 book_id：
+    # book_id: "3300144506"
 ```
 
 ### 工作流
 
-- 每次发布（早 7:00 / 晚 18:00 各一条）从 index.json 里挑下一个**正文章节**（自动跳过封面/版权/推荐序/部分扉页等）
+- 每次发布（早 7:00 / 晚 18:00 各一条）从**书籍池的第一本还没读完的书**里挑下一个**正文章节**（自动跳过封面/版权/推荐序/部分扉页等）
 - 用纯 HTTP GET 抓该章的 AI 摘要（在页面 `<meta name="description">` 里，约 600-1000 字）
 - 喂给 LLM，让它写一段 200-500 字的读书感悟（含原文摘抄）
-- 当章节 claim 状态记录到 `data/books/<bookId>/progress.json`，发完一章自动推进
-- 当书发完时**自动回退到 themes 模式**（主题池随机），不会卡住
+- 每本书的章节 claim 状态各自记录到 `data/books/<bookId>/progress.json`，发完一章自动推进；一本读完自动切到池里下一本
+- **当书籍池里所有书都读完时**：给 `zhihu.notify_people_url` 指向的用户发一条提醒私信（只发一次，靠 `data/books/.pool_done_notified` 标记幂等），随后**自动回退到 themes 模式**（主题池随机），不会卡住
+
+> 注：私信发送同样靠 `data/auth/storage_state.json` 登录态；想验证私信流程而不真发，可在代码里调用 `src.zhihu_messenger.send_private_message(msg, dry_run=True)`，产物看 `debug/dm_*_*.png` 截图。
 
 ### 看进度 / 重置进度
 
 ```bash
 cat data/books/3300144506/progress.json
-# 或重新从头开始：
+# 重新从头开始读某本书：
 rm data/books/3300144506/progress.json
+# 让"书籍池读完私信"能再次发送（比如往池子里加了新书）：
+rm data/books/.pool_done_notified
 ```
 
 ### 已知限制
