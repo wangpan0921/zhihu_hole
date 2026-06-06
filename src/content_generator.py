@@ -235,6 +235,13 @@ def _generate_from_theme(theme: Optional[str] = None) -> dict[str, Any]:
 # ─────────────── book_reflection 模式 ─────────────── #
 
 
+class BookPoolFinished(Exception):
+    """书籍池里所有（可用的）书都已经读完。
+
+    与普通失败区分开：发布流程据此触发"读完私信通知"，再回退到 themes。
+    """
+
+
 def _book_index_path(book_cfg: dict[str, Any]) -> Path:
     """支持两种配置：
     - book.index_path 显式路径
@@ -246,6 +253,29 @@ def _book_index_path(book_cfg: dict[str, Any]) -> Path:
     if not book_id:
         raise ValueError("config.content.book 必须配置 book_id 或 index_path")
     return DATA_DIR / "books" / str(book_id) / "index.json"
+
+
+def _resolve_index_paths(book_cfg: dict[str, Any]) -> list[Path]:
+    """解析「书籍池」配置，返回按阅读顺序排列的 index.json 路径列表。
+
+    优先级：
+    - book.book_pool（列表，按顺序逐本读完）→ 每个元素是 bookId
+    - 否则回退到单本（book.index_path 或 book.book_id），保持向后兼容
+    """
+    pool = book_cfg.get("book_pool")
+    if pool:
+        paths: list[Path] = []
+        seen: set[str] = set()
+        for item in pool:
+            bid = str(item).strip()
+            if not bid or bid in seen:
+                continue
+            seen.add(bid)
+            paths.append(DATA_DIR / "books" / bid / "index.json")
+        if paths:
+            return paths
+    # 单本（向后兼容）
+    return [_book_index_path(book_cfg)]
 
 
 def _progress_path(index_path: Path) -> Path:
@@ -299,53 +329,12 @@ def _pick_next_chapter(
     return None
 
 
-def _generate_from_book(slot: str, date: dt.date) -> dict[str, Any]:
-    cfg = load_config()
-    content_cfg = cfg["content"]
-    book_cfg = content_cfg.get("book") or {}
-    if not book_cfg:
-        raise ValueError("content.mode=book_reflection 但缺少 content.book 配置")
-
-    index_path = _book_index_path(book_cfg)
-    if not index_path.exists():
-        raise FileNotFoundError(
-            f"找不到书的索引 {index_path}，先跑 scripts/weread_index_book.py"
-        )
-    index_data = json.loads(index_path.read_text(encoding="utf-8"))
-    book_id = index_data["book_id"]
-
-    progress_path = _progress_path(index_path)
-    progress = _load_progress(progress_path, book_id)
-
-    key = f"{date.isoformat()}_{slot}"
-    claimed = progress.setdefault("claimed", {})
-
-    if key in claimed:
-        target_uid = claimed[key]["chapter_uid"]
-        chapter = next(
-            (c for c in index_data["chapters"] if c["chapterUid"] == target_uid),
-            None,
-        )
-        if chapter is None:
-            raise RuntimeError(f"progress 记录的 chapterUid={target_uid} 不在 index 里")
-        log.info("沿用已 claim 的章节：uid=%s %s", target_uid, chapter["title"])
-    else:
-        chapter = _pick_next_chapter(index_data, progress, book_cfg)
-        if chapter is None:
-            raise RuntimeError("书已经全部发完了，回退到 themes 模式")
-        claimed[key] = {
-            "chapter_uid": chapter["chapterUid"],
-            "chapter_idx": chapter["chapterIdx"],
-            "chapter_title": chapter["title"],
-            "claimed_at": dt.datetime.now().isoformat(timespec="seconds"),
-        }
-        _save_progress(progress_path, progress)
-        log.info(
-            "claim 新章节：[%s] uid=%s idx=%s %s",
-            key, chapter["chapterUid"], chapter["chapterIdx"], chapter["title"],
-        )
-
-    # 抓章节摘要
+def _build_post_from_chapter(
+    index_data: dict[str, Any],
+    chapter: dict[str, Any],
+    content_cfg: dict[str, Any],
+) -> dict[str, Any]:
+    """抓章节摘要 → 调 LLM 写读书感悟 → 组装 post dict。"""
     chap_data = fetch_chapter(chapter["url"])
     summary = chap_data.get("description") or ""
     if len(summary) < 50:
@@ -373,7 +362,7 @@ def _generate_from_book(slot: str, date: dt.date) -> dict[str, Any]:
     data["provider"] = provider
     data["mode"] = "book_reflection"
     data["book"] = {
-        "book_id": book_id,
+        "book_id": index_data["book_id"],
         "book_title": index_data["book_title"],
         "author": index_data.get("author", ""),
         "chapter_uid": chapter["chapterUid"],
@@ -385,7 +374,103 @@ def _generate_from_book(slot: str, date: dt.date) -> dict[str, Any]:
     return data
 
 
+def _claim_chapter_in_pool(
+    index_paths: list[Path],
+    book_cfg: dict[str, Any],
+    key: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """在书籍池里按顺序找到 key 对应的章节。
+
+    返回 (index_data, chapter)。
+
+    逻辑：
+    1. 幂等：若某本书的 progress 已经为这个 key claim 过章节 → 直接复用；
+    2. 否则按池顺序找第一本「还有未读正文章节」的书，claim 它的下一章；
+    3. 池里所有书都读完 → 抛 BookPoolFinished。
+    """
+    loaded: list[tuple[Path, dict[str, Any]]] = []
+    for p in index_paths:
+        if not p.exists():
+            log.warning("书籍池中索引缺失，跳过：%s（先跑 weread_index_book.py）", p)
+            continue
+        try:
+            index_data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("书籍池中索引损坏，跳过：%s（%s）", p, e)
+            continue
+        loaded.append((p, index_data))
+
+    if not loaded:
+        raise FileNotFoundError(
+            "书籍池里没有任何可用的 index.json，先跑 scripts/weread_index_book.py"
+        )
+
+    # 1. 幂等复用：这个 key 是否已在某本书里 claim 过
+    for p, index_data in loaded:
+        progress = _load_progress(_progress_path(p), index_data["book_id"])
+        rec = progress.get("claimed", {}).get(key)
+        if rec:
+            target_uid = rec["chapter_uid"]
+            chapter = next(
+                (c for c in index_data["chapters"] if c["chapterUid"] == target_uid),
+                None,
+            )
+            if chapter is None:
+                raise RuntimeError(
+                    f"progress 记录的 chapterUid={target_uid} 不在 index 里（{p}）"
+                )
+            log.info(
+                "沿用已 claim 的章节：《%s》 uid=%s %s",
+                index_data["book_title"], target_uid, chapter["title"],
+            )
+            return index_data, chapter
+
+    # 2. 按池顺序找第一本还有未读章节的书
+    for p, index_data in loaded:
+        progress_path = _progress_path(p)
+        progress = _load_progress(progress_path, index_data["book_id"])
+        chapter = _pick_next_chapter(index_data, progress, book_cfg)
+        if chapter is None:
+            log.info("《%s》已读完，进入池中下一本", index_data["book_title"])
+            continue
+        progress.setdefault("claimed", {})[key] = {
+            "chapter_uid": chapter["chapterUid"],
+            "chapter_idx": chapter["chapterIdx"],
+            "chapter_title": chapter["title"],
+            "claimed_at": dt.datetime.now().isoformat(timespec="seconds"),
+        }
+        _save_progress(progress_path, progress)
+        log.info(
+            "claim 新章节：[%s]《%s》 uid=%s idx=%s %s",
+            key, index_data["book_title"], chapter["chapterUid"],
+            chapter["chapterIdx"], chapter["title"],
+        )
+        return index_data, chapter
+
+    # 3. 全部读完
+    raise BookPoolFinished("书籍池里所有书都已读完")
+
+
+def _generate_from_book(slot: str, date: dt.date) -> dict[str, Any]:
+    cfg = load_config()
+    content_cfg = cfg["content"]
+    book_cfg = content_cfg.get("book") or {}
+    if not book_cfg:
+        raise ValueError("content.mode=book_reflection 但缺少 content.book 配置")
+
+    index_paths = _resolve_index_paths(book_cfg)
+    key = f"{date.isoformat()}_{slot}"
+    index_data, chapter = _claim_chapter_in_pool(index_paths, book_cfg, key)
+    return _build_post_from_chapter(index_data, chapter, content_cfg)
+
+
 # ─────────────── 顶层入口 ─────────────── #
+
+
+def generate_from_theme(theme: Optional[str] = None) -> dict[str, Any]:
+    """公开入口：强制走 themes 模式生成一条想法（书籍池读完后调度层兜底用）。"""
+    load_env()
+    return _generate_from_theme(theme)
 
 
 def generate_post(
@@ -408,6 +493,10 @@ def generate_post(
         d = date or dt.date.today()
         try:
             return _generate_from_book(slot, d)
+        except BookPoolFinished:
+            # 书籍池读完是一个有意义的终态：向上抛给调度层去发私信通知，
+            # 这里不静默吞掉。调度层捕获后会回退 themes 继续发内容。
+            raise
         except Exception as e:
             log.warning("book_reflection 失败，回退到 themes：%s", e)
             # 不向上抛错；继续走 themes

@@ -5,6 +5,9 @@ zhihu:
   ring_url: "https://www.zhihu.com/ring/host/1939123142221100709?tab=new&tab_id=0"
   # 登录态保存路径
   storage_state: "data/auth/storage_state.json"
+  # 书籍池全部读完后，给"运营者本人"发提醒私信的目标用户主页 URL。
+  # 形如 https://www.zhihu.com/people/<urlToken>。留空则跳过发私信。
+  notify_people_url: ""
 
 # 微信读书：用于抓取指定书的章节正文做"读书感悟"型内容
 weread:
@@ -29,9 +32,17 @@ content:
 
   # book_reflection 模式专用配置
   book:
-    # 书 ID（自动用 data/books/<book_id>/index.json）
-    # 用 scripts/weread_index_book.py 索引完一本书后这里填对应 bookId
-    book_id: "3300199477"
+    # 【书籍池】按顺序逐本读完。每个元素是一本书的 bookId
+    # （用 scripts/weread_index_book.py 索引完一本书后看 index.json 所在目录名）。
+    # 发布时从池子第一本还没读完的书里挑下一章；一本读完自动进入下一本；
+    # 池子里所有书都读完后，会给 zhihu.notify_people_url 发一条提醒私信，
+    # 并自动回退到 themes 主题池模式继续产出内容。
+    book_pool:
+      - "3300199477"
+    # 书籍池全部读完时发的私信内容（留空用默认提醒文案）
+    finish_message: ""
+    # （向后兼容）只读一本书时也可以只配 book_id，不配 book_pool：
+    # book_id: "3300199477"
     # 跳过这些 chapterUid（除了自动跳过非正文章节外，再额外排除）
     skip_chapter_uids: []
     # 章节最小字数（小于此字数的章节视为非正文跳过，默认 800）
