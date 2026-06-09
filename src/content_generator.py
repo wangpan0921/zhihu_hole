@@ -206,6 +206,29 @@ def _validate_post(data: dict[str, Any]) -> None:
             raise ValueError(f"LLM 返回缺少字段 {k}：{data}")
 
 
+# ─────────────── 出处署名 ─────────────── #
+
+# 读书模式生成的想法，正文末尾加一行书名出处。
+# 正则用来识别"是否已经署过名"，避免重复追加（迁移旧草稿时要幂等）。
+_SOURCE_RE = re.compile(r"——\s*《[^》]+》\s*$")
+
+
+def append_book_source(body: str, book_title: str) -> str:
+    """在正文末尾追加出处（书名）。
+
+    - 只用于 book_reflection（读书）模式生成的想法；
+    - 幂等：正文若已带「——《…》」结尾则原样返回，便于迁移旧草稿时反复跑；
+    - 出处与正文之间空一行，发布时会渲染成单独一行。
+    """
+    book_title = (book_title or "").strip()
+    if not book_title:
+        return body
+    stripped = (body or "").rstrip()
+    if _SOURCE_RE.search(stripped):
+        return stripped
+    return f"{stripped}\n\n——《{book_title}》"
+
+
 # ─────────────── themes 模式 ─────────────── #
 
 
@@ -358,6 +381,8 @@ def _build_post_from_chapter(
     raw, provider = _call_llm(SYSTEM_PROMPT_BOOK, user_prompt)
     data = _extract_json(raw)
     _validate_post(data)
+    # 读书模式：正文末尾署上出处（书名）
+    data["body"] = append_book_source(data["body"], index_data["book_title"])
     data["theme"] = f"《{index_data['book_title']}》{chapter['title']}"
     data["provider"] = provider
     data["mode"] = "book_reflection"
