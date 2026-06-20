@@ -216,6 +216,25 @@ content:
    ```
 
    脚本会用你已保存的微信读书登录态，在阅读器里循环点"下一章"，把每章的 URL 抓出来。一本书 40 章左右大约 2-3 分钟。
+3. 索引完成后，终端会打印 `索引完成：data/books/<bookId>/index.json`。把这个目录名里的 `<bookId>` 追加到 `config.yaml` 的 `content.book.book_pool`：
+
+   ```yaml
+   content:
+     book:
+       book_pool:
+         - "3300199477"
+         - "<bookId>"
+   ```
+
+   例如微信读书 URL `https://weread.qq.com/web/reader/c2f32c90813abb4b4g019bf4` 对应的 bookId 是 `3300200209`，添加后写成：
+
+   ```yaml
+   content:
+     book:
+       book_pool:
+         - "3300199477"
+         - "3300200209"
+   ```
 
 ### 切换到 book_reflection 模式
 
