@@ -146,25 +146,70 @@ def draw_overlay(base, step, caption):
         y += 42
 
 
-def make_frame(board, src_bounds, crop_box, step, caption):
+def fit_crop_to_frame(board, src_bounds, crop_box, canvas_size):
     mapped = map_box(crop_box, src_bounds, board.size)
     x1, y1, x2, y2 = mapped
     x1, y1 = max(0, x1), max(0, y1)
     x2, y2 = min(board.width, x2), min(board.height, y2)
     crop = board.crop((x1, y1, x2, y2))
-    crop = ImageOps.contain(crop, (WIDTH - 120, 660), method=Image.Resampling.LANCZOS)
-    frame = Image.new("RGB", (WIDTH, HEIGHT), (246, 248, 252))
-    # Soft full-board context in the background.
-    bg = ImageOps.contain(board, (WIDTH, HEIGHT), method=Image.Resampling.LANCZOS)
-    bg = ImageEnhance.Brightness(bg).enhance(1.18)
-    bg = ImageEnhance.Contrast(bg).enhance(0.65)
-    frame.paste(bg, ((WIDTH - bg.width) // 2, (HEIGHT - bg.height) // 2))
+    return ImageOps.contain(crop, canvas_size, method=Image.Resampling.LANCZOS)
+
+
+def draw_full_board_locator(frame, board, src_bounds, crop_box, step, caption):
     draw = ImageDraw.Draw(frame)
-    draw.rectangle((0, 0, WIDTH, HEIGHT), fill=(246, 248, 252, 210))
-    draw.rounded_rectangle((54, 116, WIDTH - 54, 748), radius=12, fill=(255, 255, 255), outline=(205, 214, 226), width=2)
-    frame.paste(crop, ((WIDTH - crop.width) // 2, 136))
-    draw.rounded_rectangle(((WIDTH - crop.width) // 2, 136, (WIDTH + crop.width) // 2, 136 + crop.height), radius=8, outline=(37, 99, 235), width=5)
-    draw_overlay(frame, step, caption)
+    board_fit = ImageOps.contain(board, (1500, 900), method=Image.Resampling.LANCZOS)
+    bx, by = (WIDTH - board_fit.width) // 2, 110
+    frame.paste(board_fit, (bx, by))
+    # Map current crop box into the fitted full-board image.
+    x1, y1, x2, y2 = map_box(crop_box, src_bounds, board.size)
+    sx, sy = board_fit.width / board.width, board_fit.height / board.height
+    rect = (int(bx + x1 * sx), int(by + y1 * sy), int(bx + x2 * sx), int(by + y2 * sy))
+    draw.rectangle(rect, outline=(220, 38, 38), width=8)
+    draw.rounded_rectangle((42, 36, 430, 96), radius=8, fill=(255, 255, 255), outline=(210, 220, 235), width=2)
+    draw.text((64, 45), f"第 {step} 步：先看画板位置", font=F_BODY, fill=(31, 35, 41))
+    draw.rounded_rectangle((70, 910, WIDTH - 70, 1040), radius=10, fill=(255, 255, 255), outline=(210, 220, 235), width=2)
+    for i, line in enumerate(wrap(draw, caption, F_BODY, WIDTH - 180)[:2]):
+        draw.text((100, 930 + i * 40), line, font=F_BODY, fill=(31, 35, 41))
+
+
+def draw_zoom_frame(frame, board, src_bounds, crop_box, step, caption):
+    draw = ImageDraw.Draw(frame)
+    crop = fit_crop_to_frame(board, src_bounds, crop_box, (WIDTH - 80, 760))
+    x, y = (WIDTH - crop.width) // 2, 30
+    frame.paste(crop, (x, y))
+    draw.rectangle((x, y, x + crop.width, y + crop.height), outline=(37, 99, 235), width=6)
+    # Bottom subtitle band, compact so the board remains large.
+    draw.rounded_rectangle((42, 820, WIDTH - 42, 1048), radius=10, fill=(255, 255, 255), outline=(210, 220, 235), width=2)
+    draw.rounded_rectangle((70, 848, 188, 966), radius=10, fill=(37, 99, 235))
+    draw.text((94, 874), str(step), font=F_STEP, fill=(255, 255, 255))
+    draw.text((220, 846), f"第 {step} 步", font=F_TITLE, fill=(31, 35, 41))
+    yy = 908
+    for line in wrap(draw, caption, F_BODY, WIDTH - 300)[:3]:
+        draw.text((220, yy), line, font=F_BODY, fill=(31, 35, 41))
+        yy += 40
+
+
+def draw_return_frame(frame, board, src_bounds, crop_box, step):
+    draw = ImageDraw.Draw(frame)
+    board_fit = ImageOps.contain(board, (1380, 880), method=Image.Resampling.LANCZOS)
+    bx, by = (WIDTH - board_fit.width) // 2, 70
+    frame.paste(board_fit, (bx, by))
+    x1, y1, x2, y2 = map_box(crop_box, src_bounds, board.size)
+    sx, sy = board_fit.width / board.width, board_fit.height / board.height
+    rect = (int(bx + x1 * sx), int(by + y1 * sy), int(bx + x2 * sx), int(by + y2 * sy))
+    draw.rectangle(rect, outline=(22, 163, 74), width=6)
+    draw.rounded_rectangle((52, 940, WIDTH - 52, 1038), radius=10, fill=(255, 255, 255), outline=(210, 220, 235), width=2)
+    draw.text((86, 965), f"第 {step} 步结束，回到全图看下一条连线。", font=F_BODY, fill=(31, 35, 41))
+
+
+def make_frame(board, src_bounds, crop_box, step, caption, mode='zoom'):
+    frame = Image.new("RGB", (WIDTH, HEIGHT), (246, 248, 252))
+    if mode == 'full':
+        draw_full_board_locator(frame, board, src_bounds, crop_box, step, caption)
+    elif mode == 'return':
+        draw_return_frame(frame, board, src_bounds, crop_box, step)
+    else:
+        draw_zoom_frame(frame, board, src_bounds, crop_box, step, caption)
     return frame
 
 
@@ -262,11 +307,17 @@ def main() -> int:
         for item in connectors:
             step = item["step"]
             crop_box = crop_for_step(step, tables, item)
-            frame = make_frame(board, src_bounds, crop_box, step, CAPTIONS[step])
+            phases = [
+                (make_frame(board, src_bounds, crop_box, step, CAPTIONS[step], 'full'), 0.9),
+                (make_frame(board, src_bounds, crop_box, step, CAPTIONS[step], 'zoom'), max(2.2, per_step - 1.4)),
+                (make_frame(board, src_bounds, crop_box, step, CAPTIONS[step], 'return'), 0.5),
+            ]
             if step in {1, 4, 9, 16, 23, 26}:
-                frame.save(frames_dir / f"step_{step:02d}.png")
-            for _ in range(int(per_step * FPS)):
-                writer.append_data(np.asarray(frame))
+                phases[0][0].save(frames_dir / f"step_{step:02d}_full.png")
+                phases[1][0].save(frames_dir / f"step_{step:02d}_zoom.png")
+            for frame, seconds in phases:
+                for _ in range(int(seconds * FPS)):
+                    writer.append_data(np.asarray(frame))
     finally:
         writer.close()
 

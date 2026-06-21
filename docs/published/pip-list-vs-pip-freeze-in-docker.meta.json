@@ -1,0 +1,7 @@
+{
+  "title": "Docker 镜像中 pip list 和 pip freeze 为什么结果不同",
+  "source_file": "pip-list-vs-pip-freeze-in-docker.md",
+  "published_at": "2026-06-17T19:00:55",
+  "article_url": "https://zhuanlan.zhihu.com/p/2050654111968782210?just_published=2",
+  "column": "Agent工坊"
+}

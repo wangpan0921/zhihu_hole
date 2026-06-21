@@ -2,9 +2,10 @@
 # 安装 / 卸载 当前用户的 crontab 任务
 #
 # 默认时间表：
-#   19:00  预生成「明天」的 morning + evening 两条草稿到 pending/
-#   07:00  发布 morning slot（pending 没有则现生现发）
-#   18:00  发布 evening slot
+#   19:00  预生成「明天」的 morning + evening 两条想法草稿到 data/pending/
+#   19:00  扫 docs/pending/ 发布一篇文章到知乎专栏（同一时刻，两条任务并行跑互不影响）
+#   07:00  发布 morning slot 想法（data/pending 没有则现生现发）
+#   18:00  发布 evening slot 想法
 #
 # 用法：
 #   bash scripts/install_cron.sh install     # 安装
@@ -29,23 +30,28 @@ TAG="# zhihu-treehole-auto"
 RUN_GEN="cd $PROJECT_DIR && $PY scripts/generate_drafts.py --for tomorrow >> $LOG 2>&1"
 RUN_PUB_M="cd $PROJECT_DIR && $PY scripts/publish_slot.py morning >> $LOG 2>&1"
 RUN_PUB_E="cd $PROJECT_DIR && $PY scripts/publish_slot.py evening >> $LOG 2>&1"
+RUN_PUB_ARTICLE="cd $PROJECT_DIR && $PY scripts/publish_articles.py >> $LOG 2>&1"
 
-# 4 行任务（含一行注释 tag）
+# 5 行任务（含一行注释 tag）
 read -r -d '' BLOCK <<EOF || true
 $TAG
 0 19 * * *   $RUN_GEN
+0 19 * * *   $RUN_PUB_ARTICLE
 0  7 * * *   $RUN_PUB_M
 0 18 * * *   $RUN_PUB_E
 EOF
+
+# tag 后面跟着的任务行数（用于 install/uninstall 时整块替换）
+TASK_LINES=4
 
 cmd="${1:-status}"
 
 case "$cmd" in
   install)
-    # 先剥掉旧的同 tag 块（tag 行 + 后面 3 行任务 = 4 行）再插入
+    # 先剥掉旧的同 tag 块（tag 行 + 后面 N 行任务）再插入
     current=$(crontab -l 2>/dev/null || true)
-    cleaned=$(echo "$current" | awk -v tag="$TAG" '
-      $0==tag {skip=3; next}
+    cleaned=$(echo "$current" | awk -v tag="$TAG" -v n="$TASK_LINES" '
+      $0==tag {skip=n; next}
       skip>0  {skip--; next}
       {print}
     ')
@@ -58,8 +64,8 @@ case "$cmd" in
     ;;
   uninstall)
     current=$(crontab -l 2>/dev/null || true)
-    cleaned=$(echo "$current" | awk -v tag="$TAG" '
-      $0==tag {skip=3; next}
+    cleaned=$(echo "$current" | awk -v tag="$TAG" -v n="$TASK_LINES" '
+      $0==tag {skip=n; next}
       skip>0  {skip--; next}
       {print}
     ')
@@ -71,7 +77,7 @@ case "$cmd" in
     echo "已卸载 zhihu-treehole 相关 cron 任务"
     ;;
   status)
-    crontab -l 2>/dev/null | grep -A3 "$TAG" || echo "（未安装）"
+    crontab -l 2>/dev/null | grep -A"$TASK_LINES" "$TAG" || echo "（未安装）"
     ;;
   *)
     echo "用法: $0 {install|uninstall|status}" >&2

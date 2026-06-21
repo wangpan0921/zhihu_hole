@@ -7,7 +7,7 @@ zhihu:
   storage_state: "data/auth/storage_state.json"
   # 书籍池全部读完后，给"运营者本人"发提醒私信的目标用户主页 URL。
   # 形如 https://www.zhihu.com/people/<urlToken>。留空则跳过发私信。
-  notify_people_url: ""
+  notify_people_url: "https://www.zhihu.com/people/one-31-9-97"
 
 # 微信读书：用于抓取指定书的章节正文做"读书感悟"型内容
 weread:
@@ -38,8 +38,9 @@ content:
     # 池子里所有书都读完后，会给 zhihu.notify_people_url 发一条提醒私信，
     # 并自动回退到 themes 主题池模式继续产出内容。
     book_pool:
-      - "3300199477"
-      - "3300200209"
+      - "3300199477"   # 《中年破局：别信什么35岁危机（轻纪实）》张峻滔
+      - "3300194835"   # 《停止自我攻击》周小宽
+      - "3300200209"   # 《半小时讲透第一性原理（轻思维）》樊中恺
     # 书籍池全部读完时发的私信内容（留空用默认提醒文案）
     finish_message: ""
     # （向后兼容）只读一本书时也可以只配 book_id，不配 book_pool：
@@ -74,6 +75,16 @@ image:
   openai_model: "dall-e-3"   # gpt-image-1 也可
   size: "1024x1024"
   style: "ethereal, peaceful, minimalist, soft natural light, dreamy atmosphere, no text, no people"
+
+# 文章 → 专栏 发布配置（独立于上面的圈子想法链路）
+# 每天 19:00 cron 触发 scripts/publish_articles.py：
+#   - 扫 docs/pending/ 下的 .md，挑 mtime 最早的一篇
+#   - 发布到下面 column_name 指定的专栏
+#   - 成功后移到 docs/published/ 并写 {stem}.meta.json
+#   - 目录为空就什么都不做
+article:
+  # 发布弹窗里要选的目标专栏名（按字面文本匹配）
+  column_name: "Agent工坊"
 
 # 发布调度
 schedule:
