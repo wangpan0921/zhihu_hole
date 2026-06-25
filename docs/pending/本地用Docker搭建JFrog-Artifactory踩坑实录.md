@@ -252,6 +252,48 @@ docker push <地址>/<docker仓库名>/myapp:1.0
 | access 反复重试 | `Registration with router ... UNAVAILABLE` | 同上，根因仍是 system.yaml 写入失败 |
 | 镜像拉取超时 | `TLS handshake timeout` | 镜像源/网络抖动，重试 `docker pull` 即可 |
 
+## Virtual Repository 与 Local Repository 的关系，以及多仓同名包的获取顺序
+
+把仓库跑起来后，第二个常被问到的概念就是仓库类型。Artifactory 里仓库分三种：
+
+- **Local Repository（本地仓库）**：真正存放制品的地方，你 `push` / 上传的包就落在这里，是「源」。
+- **Remote Repository（远程仓库）**：对外部仓库（如 Docker Hub、Maven Central、npmjs）的代理，拉过一次的包会缓存在它的本地 cache 里。
+- **Virtual Repository（虚拟仓库）**：本身**不存任何制品**，只是一个「聚合入口 / 别名」。它按顺序把若干 local、remote（甚至其它 virtual）仓库聚合成一个统一地址。客户端只需要配置这一个 URL，背后挂了哪些仓库、顺序如何，都对客户端透明。
+
+打个比方：local 是一个个真实的仓库货架，virtual 是前台的一个「统一取货窗口」。你跟窗口要某个包，窗口按它内部登记的一串货架顺序，一个个去找，谁先有就给你谁的。
+
+### 一个 virtual 映射多个 local，同名包的解析顺序
+
+这正是问题的核心。**当一个 virtual repository 里挂了多个 local repository，而这些 local 里存在路径完全相同的包时，Artifactory 的解析规则是：按 virtual repository 里「Selected/Included Repositories」配置的顺序，从上到下逐个查找，返回第一个命中的仓库里的那一份，后面的同名包直接被「遮蔽」，不再参与。**
+
+完整的解析优先级（virtual repo 永远是这个大顺序）：
+
+1. **所有 local 仓库**——按 virtual 里配置的先后顺序；
+2. **remote 仓库的本地 cache**——按顺序；
+3. **remote 仓库本身**（真正去外网拉）——按顺序。
+
+所以对于「多个 local 有同样的 package」这种情形，关键结论是：
+
+- **谁在 virtual 的列表里排在前面，谁的那一份就被返回**，跟版本号高低、上传时间早晚都无关——它只认列表顺序，不会自动挑「最新的那一个」。
+- 想换成另一个 local 的包，要么调整 virtual 里的仓库排序，要么直接绕过 virtual、用 `local-repo-name` 这个具体地址去取。
+- 这也是为什么官方反复强调：**一个 virtual repository 只放同一种 package type**，并且要**精心安排成员仓库的顺序**——把更可信、更优先的源放在前面。
+
+### 一个常见的认知误区
+
+不少人以为 virtual 会「合并所有 local 并返回版本最高的包」。**不会。** Latest 类的查询（如 `[RELEASE]`、Latest Version API）在跨多个 local 时，历史上就踩过「只取列表第一个仓库的版本、而非全局最新」的坑（JFrog 官方 issue RTFACT-17532 即为此类）。所以生产里如果依赖「取最新」，不要把同名制品分散到多个 local 再指望 virtual 帮你择优，而应：同一类制品集中到同一个 local，或在客户端/CI 里显式指定来源仓库。
+
+### 怎么查 virtual 实际解析了哪些仓库、什么顺序
+
+在 UI 里编辑 virtual repository，`Repositories` 配置页的 **Selected Repositories / Resolved Repositories** 列表就是真实的解析顺序（从上到下）；如果成员里还嵌套了 virtual，Resolved 列表会自动展开成最终的 local/remote 序列。命令行可以用 REST 看配置：
+
+```bash
+curl -u admin:<密码> \
+  "http://localhost:8081/artifactory/api/repositories/<virtual-repo-key>"
+# 返回里的 "repositories": [...] 数组顺序，就是解析顺序
+```
+
+一句话记忆：**virtual 不存包，只按「成员列表顺序」做查找；多个 local 撞同名包时，列表里排第一个的获胜，不比版本、不比时间。**
+
 ## 小结
 
 新版 Artifactory 自建的两个关键认知：(1) 必须外接 PostgreSQL，Derby 已被禁；
