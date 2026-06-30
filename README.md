@@ -142,11 +142,58 @@ bash scripts/install_cron.sh status   # 查看
 
 | 时间 | 动作 |
 | ---- | ---- |
+| 08:00 | 扫 `docs/pending/`，按顺序发布一篇文章到微信公众号 |
 | 19:00 | 为「明天」的 morning + evening 各生成一条草稿到 `data/pending/` |
 | 07:00 | 发布当天的 morning 草稿（若没有则现生现发） |
 | 18:00 | 发布当天的 evening 草稿（若没有则现生现发） |
 
 要修改时间，编辑 `scripts/install_cron.sh` 重装，或直接 `crontab -e` 改。
+
+---
+
+## 微信公众号文章发布
+
+### 一次性扫码登录
+
+```bash
+./venv/bin/python scripts/wechat_login.py
+```
+
+脚本会打开 Chromium，使用微信扫码登录公众号后台，登录态保存到
+`data/auth/wechat_mp_state.json`。服务器没有图形界面时可以用：
+
+```bash
+./venv/bin/python scripts/wechat_login.py --headless
+```
+
+然后打开 `debug/wechat_login_qr.png` 扫码。
+
+### 手动试发
+
+```bash
+./venv/bin/python scripts/publish_wechat_articles.py --dry-run
+```
+
+它会从 `docs/pending/` 按修改时间选最早的一篇 Markdown，套公众号排版模板后填入图文编辑器；`--dry-run` 不会点击发表，也不会归档。确认截图和编辑器内容正常后执行：
+
+```bash
+./venv/bin/python scripts/publish_wechat_articles.py
+```
+
+发布成功后，源文件会移动到 `docs/published/`，并写一份
+`{文件名}.wechat.meta.json`。如果 `docs/pending/` 为空，脚本正常退出。
+
+配置在 `config.yaml` 的 `wechat_mp` 段：
+
+```yaml
+wechat_mp:
+  storage_state: "data/auth/wechat_mp_state.json"
+  edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=..."
+  publish_action: "publish"   # 或 draft：只保存草稿
+```
+
+公众号后台若出现扫码确认、安全验证或 DOM 调整，脚本会停止并把关键截图写到
+`debug/wechat_article_*.png`，文章不会被归档。
 
 ---
 

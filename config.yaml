@@ -87,6 +87,20 @@ article:
   # 发布弹窗里要选的目标专栏名（按字面文本匹配）
   column_name: "Agent工坊"
 
+# 微信公众号发布配置
+# 每天 08:00 cron 触发 scripts/publish_wechat_articles.py：
+#   - 扫 docs/pending/ 下的 .md，挑 mtime 最早的一篇
+#   - 使用公众号友好的 HTML 模板粘贴到图文编辑器
+#   - 成功后移到 docs/published/ 并写 {stem}.wechat.meta.json
+#   - 目录为空就什么都不做
+wechat_mp:
+  # 运行 scripts/wechat_login.py 扫码后保存的微信公众号后台登录态
+  storage_state: "data/auth/wechat_mp_state.json"
+  # 新建图文链接；可保留 issue 中给出的链接，token 过期时脚本会从首页 URL 尝试补新 token
+  edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=606650881&lang=zh_CN&timestamp=1782829732579"
+  # publish：尝试点击发表/发布/群发；draft：只保存为草稿
+  publish_action: "publish"
+
 # 发布调度
 schedule:
   # 每天发布时刻（24h），cron 会按这些点触发

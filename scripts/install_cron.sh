@@ -3,6 +3,7 @@
 #
 # 默认时间表：
 #   19:00  预生成「明天」的 morning + evening 两条想法草稿到 data/pending/
+#   08:00  扫 docs/pending/ 发布一篇文章到微信公众号
 #   19:00  扫 docs/pending/ 发布一篇文章到知乎专栏（同一时刻，两条任务并行跑互不影响）
 #   07:00  发布 morning slot 想法（data/pending 没有则现生现发）
 #   18:00  发布 evening slot 想法
@@ -31,10 +32,12 @@ RUN_GEN="cd $PROJECT_DIR && $PY scripts/generate_drafts.py --for tomorrow >> $LO
 RUN_PUB_M="cd $PROJECT_DIR && $PY scripts/publish_slot.py morning >> $LOG 2>&1"
 RUN_PUB_E="cd $PROJECT_DIR && $PY scripts/publish_slot.py evening >> $LOG 2>&1"
 RUN_PUB_ARTICLE="cd $PROJECT_DIR && $PY scripts/publish_articles.py >> $LOG 2>&1"
+RUN_PUB_WECHAT="cd $PROJECT_DIR && $PY scripts/publish_wechat_articles.py >> $LOG 2>&1"
 
-# 5 行任务（含一行注释 tag）
+# 6 行任务（含一行注释 tag）
 read -r -d '' BLOCK <<EOF || true
 $TAG
+0  8 * * *   $RUN_PUB_WECHAT
 0 19 * * *   $RUN_GEN
 0 19 * * *   $RUN_PUB_ARTICLE
 0  7 * * *   $RUN_PUB_M
@@ -42,7 +45,7 @@ $TAG
 EOF
 
 # tag 后面跟着的任务行数（用于 install/uninstall 时整块替换）
-TASK_LINES=4
+TASK_LINES=5
 
 cmd="${1:-status}"
 
