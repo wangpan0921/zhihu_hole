@@ -32,9 +32,13 @@ def _extract_title_and_body(md_text: str, fallback_title: str) -> Tuple[str, str
     return (title or fallback_title), body
 
 
+def _wechat_meta_path(source: Path) -> Path:
+    return DOCS_PUBLISHED / f"{source.stem}.wechat.meta.json"
+
+
 def _pick_oldest_pending() -> Optional[Path]:
     DOCS_PENDING.mkdir(parents=True, exist_ok=True)
-    files = list(DOCS_PENDING.glob("*.md"))
+    files = [p for p in DOCS_PENDING.glob("*.md") if not _wechat_meta_path(p).exists()]
     if not files:
         return None
     files.sort(key=lambda p: (p.stat().st_mtime, p.name))
@@ -48,7 +52,7 @@ def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
     """
     target = _pick_oldest_pending()
     if target is None:
-        log.info("docs/pending 没有 .md，跳过本次微信公众号发布")
+        log.info("docs/pending 没有未发公众号的 .md，跳过本次微信公众号发布")
         return None
 
     all_count = len(list(DOCS_PENDING.glob("*.md")))
@@ -65,18 +69,17 @@ def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
         return article_url
 
     DOCS_PUBLISHED.mkdir(parents=True, exist_ok=True)
-    archived = DOCS_PUBLISHED / target.name
-    target.rename(archived)
-    log.info("已归档：%s", archived)
+    log.info("微信公众号已发布，保留待发源文件供知乎 19:00 发布：%s", target)
 
     meta = {
         "title": title,
-        "source_file": archived.name,
+        "source_file": target.name,
+        "source_status": "kept_in_pending_for_zhihu",
         "published_at": dt.datetime.now().isoformat(timespec="seconds"),
         "article_url": article_url,
         "platform": "wechat_mp",
     }
-    meta_path = DOCS_PUBLISHED / f"{archived.stem}.wechat.meta.json"
+    meta_path = _wechat_meta_path(target)
     meta_path.write_text(
         json.dumps(meta, ensure_ascii=False, indent=2),
         encoding="utf-8",

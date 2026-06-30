@@ -180,8 +180,7 @@ bash scripts/install_cron.sh status   # 查看
 ./venv/bin/python scripts/publish_wechat_articles.py
 ```
 
-发布成功后，源文件会移动到 `docs/published/`，并写一份
-`{文件名}.wechat.meta.json`。如果 `docs/pending/` 为空，脚本正常退出。
+发布成功后，源文件会继续留在 `docs/pending/`，供 19:00 的知乎专栏任务继续发布同一篇文章；脚本只会在 `docs/published/` 写一份 `{文件名}.wechat.meta.json` 作为公众号已发标记。后续 08:00 任务会跳过已有这个标记的 pending 文件，继续找下一篇未发公众号的文章。如果 `docs/pending/` 为空或都已发过公众号，脚本正常退出。
 
 配置在 `config.yaml` 的 `wechat_mp` 段：
 

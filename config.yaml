@@ -91,8 +91,9 @@ article:
 # 每天 08:00 cron 触发 scripts/publish_wechat_articles.py：
 #   - 扫 docs/pending/ 下的 .md，挑 mtime 最早的一篇
 #   - 使用公众号友好的 HTML 模板粘贴到图文编辑器
-#   - 成功后移到 docs/published/ 并写 {stem}.wechat.meta.json
-#   - 目录为空就什么都不做
+#   - 成功后保留源文件在 docs/pending/，供 19:00 知乎任务继续发布
+#   - 在 docs/published/ 写 {stem}.wechat.meta.json，作为公众号已发标记
+#   - 目录为空或 pending 文件都已有公众号标记就什么都不做
 wechat_mp:
   # 运行 scripts/wechat_login.py 扫码后保存的微信公众号后台登录态
   storage_state: "data/auth/wechat_mp_state.json"

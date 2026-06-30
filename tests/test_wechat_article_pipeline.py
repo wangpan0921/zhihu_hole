@@ -25,7 +25,7 @@ def test_extract_title_falls_back_to_filename():
     assert body == "正文第一行\n\n第二行"
 
 
-def test_publish_one_pending_archives_oldest(tmp_path, monkeypatch):
+def test_publish_one_pending_keeps_source_for_zhihu(tmp_path, monkeypatch):
     pending = tmp_path / "docs" / "pending"
     published = tmp_path / "docs" / "published"
     pending.mkdir(parents=True)
@@ -55,14 +55,48 @@ def test_publish_one_pending_archives_oldest(tmp_path, monkeypatch):
 
     assert url == "https://mp.weixin.qq.com/s/test"
     assert calls == [("旧文", "正文", False)]
-    assert not older.exists()
+    assert older.exists()
     assert newer.exists()
-    assert (published / "older.md").exists()
+    assert not (published / "older.md").exists()
 
     meta = json.loads((published / "older.wechat.meta.json").read_text(encoding="utf-8"))
     assert meta["title"] == "旧文"
     assert meta["platform"] == "wechat_mp"
+    assert meta["source_status"] == "kept_in_pending_for_zhihu"
     assert meta["article_url"] == "https://mp.weixin.qq.com/s/test"
+
+
+def test_skips_pending_file_that_already_has_wechat_meta(tmp_path, monkeypatch):
+    pending = tmp_path / "docs" / "pending"
+    published = tmp_path / "docs" / "published"
+    pending.mkdir(parents=True)
+    published.mkdir(parents=True)
+
+    older = pending / "older.md"
+    newer = pending / "newer.md"
+    older.write_text("# 旧文\n\n正文", encoding="utf-8")
+    newer.write_text("# 新文\n\n正文", encoding="utf-8")
+    os.utime(older, (older.stat().st_mtime - 10, older.stat().st_mtime - 10))
+    (published / "older.wechat.meta.json").write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(wp, "DOCS_PENDING", pending)
+    monkeypatch.setattr(wp, "DOCS_PUBLISHED", published)
+
+    calls = []
+
+    def fake_publish(title, body, *, dry_run=False):
+        calls.append((title, body, dry_run))
+        return "https://mp.weixin.qq.com/s/newer"
+
+    monkeypatch.setattr(wp, "publish_wechat_article", fake_publish)
+
+    url = wp.publish_one_pending_to_wechat()
+
+    assert url == "https://mp.weixin.qq.com/s/newer"
+    assert calls == [("新文", "正文", False)]
+    assert older.exists()
+    assert newer.exists()
+    assert (published / "newer.wechat.meta.json").exists()
 
 
 def test_dry_run_does_not_archive(tmp_path, monkeypatch):
