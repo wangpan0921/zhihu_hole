@@ -10,17 +10,18 @@
 from __future__ import annotations
 
 import datetime as dt
-import json
 from pathlib import Path
 from typing import Optional, Tuple
 
-from .utils import PROJECT_ROOT, get_logger
+from .article_state import (
+    archive_if_complete,
+    pending_files_unpublished_for,
+    write_platform_meta,
+)
+from .utils import get_logger
 from .zhihu_article_publisher import publish_article
 
 log = get_logger("article_pipeline")
-
-DOCS_PENDING = PROJECT_ROOT / "docs" / "pending"
-DOCS_PUBLISHED = PROJECT_ROOT / "docs" / "published"
 
 
 def _extract_title_and_body(md_text: str, fallback_title: str) -> Tuple[str, str]:
@@ -45,13 +46,9 @@ def _extract_title_and_body(md_text: str, fallback_title: str) -> Tuple[str, str
 
 
 def _pick_oldest_pending() -> Optional[Path]:
-    """从 docs/pending 选一个 .md：按 mtime 升序的第一个（最早放进来的）。"""
-    DOCS_PENDING.mkdir(parents=True, exist_ok=True)
-    files = list(DOCS_PENDING.glob("*.md"))
-    if not files:
-        return None
-    files.sort(key=lambda p: (p.stat().st_mtime, p.name))
-    return files[0]
+    """从 docs/pending 选一个未发知乎的 .md：按 mtime 最旧优先。"""
+    files = pending_files_unpublished_for("zhihu")
+    return files[0] if files else None
 
 
 def publish_one_pending(*, dry_run: bool = False) -> Optional[str]:
@@ -63,10 +60,10 @@ def publish_one_pending(*, dry_run: bool = False) -> Optional[str]:
     """
     target = _pick_oldest_pending()
     if target is None:
-        log.info("docs/pending 没有 .md，跳过本次发布")
+        log.info("docs/pending 没有未发知乎的 .md，跳过本次发布")
         return None
 
-    all_count = len(list(DOCS_PENDING.glob("*.md")))
+    all_count = len(pending_files_unpublished_for("zhihu"))
     log.info("待发数=%d（按规则只发一篇），选中：%s", all_count, target.name)
 
     md_text = target.read_text(encoding="utf-8")
@@ -79,22 +76,14 @@ def publish_one_pending(*, dry_run: bool = False) -> Optional[str]:
         log.info("dry_run=True，不归档；draft URL=%s", article_url)
         return article_url
 
-    DOCS_PUBLISHED.mkdir(parents=True, exist_ok=True)
-    archived = DOCS_PUBLISHED / target.name
-    target.rename(archived)
-    log.info("已归档：%s", archived)
-
     meta = {
         "title": title,
-        "source_file": archived.name,
+        "source_file": target.name,
         "published_at": dt.datetime.now().isoformat(timespec="seconds"),
         "article_url": article_url,
         "column": "Agent工坊",
+        "platform": "zhihu",
     }
-    meta_path = DOCS_PUBLISHED / f"{archived.stem}.meta.json"
-    meta_path.write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    log.info("已写元数据：%s", meta_path)
+    write_platform_meta(target, "zhihu", meta)
+    archive_if_complete(target)
     return article_url

@@ -180,7 +180,7 @@ bash scripts/install_cron.sh status   # 查看
 ./venv/bin/python scripts/publish_wechat_articles.py
 ```
 
-发布成功后，源文件会继续留在 `docs/pending/`，供 19:00 的知乎专栏任务继续发布同一篇文章；脚本只会在 `docs/published/` 写一份 `{文件名}.wechat.meta.json` 作为公众号已发标记。后续 08:00 任务会跳过已有这个标记的 pending 文件，继续找下一篇未发公众号的文章。如果 `docs/pending/` 为空或都已发过公众号，脚本正常退出。
+发布成功后，脚本会先在 `docs/published/` 写 `{文件名}.wechat.meta.json` 作为公众号已发标记；只有当同名文章也已经存在知乎标记 `{文件名}.meta.json` 时，才会把源 Markdown 从 `docs/pending/` 移到 `docs/published/`。如果知乎还没发，源文件会继续留在 `docs/pending/` 供 19:00 的知乎专栏任务发布。同理，知乎发布后也会先判断公众号标记是否存在，两个平台都发布完成才归档源文件。后续 08:00 任务会跳过已有公众号标记的 pending 文件，继续找下一篇未发公众号的文章。
 
 配置在 `config.yaml` 的 `wechat_mp` 段：
 
