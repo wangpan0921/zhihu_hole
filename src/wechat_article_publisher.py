@@ -131,6 +131,11 @@ def _ensure_logged_in(context: BrowserContext, page: Page) -> bool:
 
 def _title_selector(page: Page) -> Optional[str]:
     selectors = (
+        # 新版公众号编辑器：标题是 .title-editor__input 内的 ProseMirror（textarea#title 不可见）
+        ".title-editor__input [contenteditable='true']",
+        ".title-editor__input .ProseMirror",
+        "[contenteditable='true'][data-placeholder*='标题']",
+        # 旧版 fallback
         "textarea[placeholder*='标题']",
         "input[placeholder*='标题']",
         "[contenteditable='true'][placeholder*='标题']",
@@ -164,11 +169,15 @@ def _body_locator(page: Page) -> Optional[Locator]:
             continue
 
     selectors = (
+        # 新版公众号编辑器：正文是 .rich_media_content 内的 ProseMirror。
+        # 必须放在通用 .ProseMirror 之前，否则会误抓到标题的 ProseMirror。
+        ".rich_media_content .ProseMirror",
+        ".rich_media_content[contenteditable='true']",
+        ".rich_media_content [contenteditable='true']",
         "#ueditor_0",
         ".ProseMirror[contenteditable='true']",
-        ".rich_media_content[contenteditable='true']",
         ".edui-editor-body [contenteditable='true']",
-        "[contenteditable='true']:not([placeholder*='标题'])",
+        "[contenteditable='true']:not([placeholder*='标题']):not([data-placeholder*='标题'])",
     )
     for sel in selectors:
         try:
