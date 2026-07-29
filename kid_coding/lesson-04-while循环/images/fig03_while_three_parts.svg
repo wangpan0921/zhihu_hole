@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="41"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+  </style>
+<text class="" x="210" y="42" font-size="40" fill="#111827" text-anchor="start">while 的三件套：初值 / 条件 / 更新</text>
+<rect class="shape" x="420" y="120" width="360" height="70" rx="10" fill="#e7f5ff" stroke="#1971c2" stroke-width="4"/>
+<text class="" x="465" y="140" font-size="29" fill="#0b4f7a" text-anchor="start">① 初值：zombies = 0</text>
+<line class="shape" x1="600" y1="190" x2="600" y2="250" stroke="#1971c2" stroke-width="4" marker-end="url(#arrow-blue)"/>
+<polygon class="shape" points="600,250 800,335 600,420 400,335" fill="#fff4cc" stroke="#f08c00" stroke-width="4"/>
+<text class="" x="475" y="316" font-size="29" fill="#7c2d12" text-anchor="start">② 条件：zombies &lt; 3 ?</text>
+<line class="shape" x1="800" y1="335" x2="970" y2="335" stroke="#0ca678" stroke-width="4" marker-end="url(#arrow-green)"/>
+<text class="" x="835" y="290" font-size="27" fill="#0ca678" text-anchor="start">否</text>
+<rect class="shape" x="980" y="295" width="130" height="80" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<text class="" x="1018" y="318" font-size="30" fill="#087f5b" text-anchor="start">结束</text>
+<line class="shape" x1="600" y1="420" x2="600" y2="485" stroke="#e03131" stroke-width="4" marker-end="url(#arrow-red)"/>
+<text class="" x="625" y="435" font-size="27" fill="#e03131" text-anchor="start">是</text>
+<rect class="shape" x="385" y="495" width="430" height="82" rx="10" fill="#ffe3e3" stroke="#e03131" stroke-width="4"/>
+<text class="" x="420" y="512" font-size="27" fill="#7f1d1d" text-anchor="start">③ 更新 + 循环体：zombies += 1</text>
+<text class="code" x="515" y="545" font-size="25" fill="#7f1d1d" text-anchor="start">print(...)</text>
+<line class="shape" x1="385" y1="536" x2="285" y2="536" stroke="#e03131" stroke-width="4"/>
+<line class="shape" x1="285" y1="536" x2="285" y2="335" stroke="#e03131" stroke-width="4"/>
+<line class="shape" x1="285" y1="335" x2="400" y2="335" stroke="#e03131" stroke-width="4" marker-end="url(#arrow-red)"/>
+<text class="" x="185" y="425" font-size="26" fill="#e03131" text-anchor="start">再检查一遍</text>
+<text class="" x="315" y="615" font-size="28" fill="#e03131" text-anchor="start">三样缺一不可，尤其别忘“更新”！</text>
+</svg>

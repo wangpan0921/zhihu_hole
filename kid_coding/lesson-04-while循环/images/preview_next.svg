@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="41"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+  </style>
+<rect width="1200" height="675" fill="#b2f2bb"/>
+<rect x="0" y="0" width="1200" height="145" fill="#d3f9d8"/>
+<rect x="0" y="535" width="1200" height="140" fill="#8ce99a"/>
+<circle cx="1020" cy="105" r="56" fill="#ffd43b"/>
+<path d="M0 455 C250 420 360 480 560 430 C790 370 960 455 1200 395 L1200 675 L0 675 Z" fill="#69db7c"/>
+<rect x="450" y="215" width="300" height="250" rx="24" fill="#795548" stroke="#3e2723" stroke-width="8"/>
+<rect class="shape" x="475" y="240" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="495" y="252" width="30" height="26" fill="#4dabf7"/>
+<rect class="shape" x="565" y="240" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="585" y="252" width="30" height="26" fill="#ffd43b"/>
+<rect class="shape" x="655" y="240" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="675" y="252" width="30" height="26" fill="#f59f00"/>
+<rect class="shape" x="475" y="310" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="495" y="322" width="30" height="26" fill="#adb5bd"/>
+<rect class="shape" x="565" y="310" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="585" y="322" width="30" height="26" fill="#e03131"/>
+<rect class="shape" x="655" y="310" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="675" y="322" width="30" height="26" fill="#51cf66"/>
+<rect class="shape" x="475" y="380" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="495" y="392" width="30" height="26" fill="#4dabf7"/>
+<rect class="shape" x="565" y="380" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="585" y="392" width="30" height="26" fill="#ffd43b"/>
+<rect class="shape" x="655" y="380" width="70" height="52" rx="4" fill="#f8fafc" stroke="#495057" stroke-width="3"/>
+<rect x="675" y="392" width="30" height="26" fill="#f59f00"/>
+<rect x="330" y="270" width="72" height="72" fill="#f2c18d"/>
+<rect x="318" y="252" width="96" height="28" fill="#5d4037"/>
+<rect x="348" y="300" width="10" height="10" fill="#111827"/>
+<rect x="380" y="300" width="10" height="10" fill="#111827"/>
+<rect x="328" y="345" width="86" height="110" fill="#1c7ed6"/>
+<text class="" x="780" y="285" font-size="88" fill="#111827" text-anchor="start">?</text>
+</svg>

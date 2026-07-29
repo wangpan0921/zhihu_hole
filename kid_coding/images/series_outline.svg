@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="2760" viewBox="0 0 1600 2760">
+  <defs>
+    <filter id="wobble" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="37"/>
+      <feDisplacementMap in="SourceGraphic" scale="0.7"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#64748b"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+  </style>
+<rect width="1600" height="2760" fill="#f8fafc"/>
+<path d="M0 0 H1600 V290 C1280 230 1020 320 750 265 C430 200 245 260 0 215 Z" fill="#172033"/>
+<text x="80" y="62" font-size="54" fill="#ffffff" text-anchor="start" font-weight="800">跟着史蒂夫，从零打通信奥赛之路</text>
+<text x="82" y="132" font-size="34" fill="#d1fae5" text-anchor="start" font-weight="700">Kid Coding 系列大纲图</text>
+<text x="82" y="186" font-size="26" fill="#e5e7eb" text-anchor="start" font-weight="500">主线：生存进化 · 每学一个编程本领，就解锁一项生存 / 建造 / 探险能力</text>
+<text x="80" y="250" font-size="29" fill="#111827" text-anchor="start" font-weight="800">路线总览</text>
+<rect class="shape" x="230" y="238" width="250" height="56" rx="28" fill="#ffffff" stroke="#0ca678" stroke-width="3"/>
+<text x="355" y="253" font-size="23" fill="#0ca678" text-anchor="middle" font-weight="700">Python 入门</text>
+<line class="shape" x1="480" y1="266" x2="545" y2="266" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+<rect class="shape" x="565" y="238" width="250" height="56" rx="28" fill="#ffffff" stroke="#e03131" stroke-width="3"/>
+<text x="690" y="253" font-size="23" fill="#e03131" text-anchor="middle" font-weight="700">语言迁移</text>
+<line class="shape" x1="815" y1="266" x2="880" y2="266" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+<rect class="shape" x="900" y="238" width="250" height="56" rx="28" fill="#ffffff" stroke="#7048e8" stroke-width="3"/>
+<text x="1025" y="253" font-size="23" fill="#7048e8" text-anchor="middle" font-weight="700">C++ 备赛</text>
+<line class="shape" x1="1150" y1="266" x2="1215" y2="266" stroke="#64748b" stroke-width="3" marker-end="url(#arrow)"/>
+<rect class="shape" x="1235" y="238" width="250" height="56" rx="28" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text x="1360" y="253" font-size="23" fill="#f08c00" text-anchor="middle" font-weight="700">真题实战</text>
+<rect class="shape" x="60" y="340" width="1480" height="566" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<rect x="60" y="340" width="1480" height="76" rx="18" fill="#0ca678"/>
+<text x="92" y="360" font-size="31" fill="#ffffff" text-anchor="start" font-weight="800">第一阶段：入门关</text>
+<text x="470" y="364" font-size="24" fill="#f8fafc" text-anchor="start" font-weight="600">Python · 零基础建立信心</text>
+<rect class="shape" x="80" y="440" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="440" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="104" y="458" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="133" y="466" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">01</text>
+<rect class="shape" x="440" y="458" width="76" height="34" rx="8" fill="#e6fcf5" stroke="#0ca678" stroke-width="2"/>
+<text x="478" y="466" font-size="18" fill="#0ca678" text-anchor="middle" font-weight="700">已完成</text>
+<text x="176" y="460" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">给史蒂夫记一本账</tspan></text>
+<text x="110" y="516" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：变量、输入输出、注释、数据类型</tspan></text>
+<text x="110" y="544" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：血量 / 金币 / 名字随时在变</tspan></text>
+<rect class="shape" x="570" y="440" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="440" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="594" y="458" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="623" y="466" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">02</text>
+<rect class="shape" x="930" y="458" width="76" height="34" rx="8" fill="#fff4cc" stroke="#f08c00" stroke-width="2"/>
+<text x="968" y="466" font-size="18" fill="#f08c00" text-anchor="middle" font-weight="700">草稿中</text>
+<text x="666" y="460" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">掉进岩浆要不要扣血？</tspan></text>
+<text x="600" y="516" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：条件判断 if / elif / else、比较、布尔</tspan></text>
+<text x="600" y="544" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：踩岩浆、天黑刷怪的判断</tspan></text>
+<rect class="shape" x="1060" y="440" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="440" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="1084" y="458" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="1113" y="466" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">03</text>
+<rect class="shape" x="1420" y="458" width="76" height="34" rx="8" fill="#fff4cc" stroke="#f08c00" stroke-width="2"/>
+<text x="1458" y="466" font-size="18" fill="#f08c00" text-anchor="middle" font-weight="700">草稿中</text>
+<text x="1156" y="460" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">刷一百只怪，要写一百行吗？</tspan></text>
+<text x="1090" y="516" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：for 循环、range（固定次数）</tspan></text>
+<text x="1090" y="544" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：循环刷怪、盖一排方块</tspan></text>
+<rect class="shape" x="80" y="596" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="596" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="104" y="614" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="133" y="622" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">04</text>
+<rect class="shape" x="440" y="614" width="76" height="34" rx="8" fill="#fff4cc" stroke="#f08c00" stroke-width="2"/>
+<text x="478" y="622" font-size="18" fill="#f08c00" text-anchor="middle" font-weight="700">草稿中</text>
+<text x="176" y="616" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">怪物为什么刷不完？</tspan></text>
+<text x="110" y="672" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：while 循环、循环条件（不定次数）</tspan></text>
+<text x="110" y="700" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：夜里不停刷怪，直到天亮</tspan></text>
+<rect class="shape" x="570" y="596" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="596" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="594" y="614" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="623" y="622" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">05</text>
+<rect class="shape" x="930" y="614" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="622" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="616" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">背包格子怎么管理？</tspan></text>
+<text x="600" y="672" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：列表、索引、遍历</tspan></text>
+<text x="600" y="700" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：背包增删查、下标从 0 开始</tspan></text>
+<rect class="shape" x="1060" y="596" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="596" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="1084" y="614" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="1113" y="622" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">06</text>
+<rect class="shape" x="1420" y="614" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="622" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="616" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">把「合成」变成一台机器</tspan></text>
+<text x="1090" y="672" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：函数、参数、返回值</tspan></text>
+<text x="1090" y="700" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：合成台 = 输入材料出产物</tspan></text>
+<rect class="shape" x="80" y="752" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="752" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="104" y="770" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="133" y="778" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">07</text>
+<rect class="shape" x="440" y="770" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="778" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="772" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">聊天框里不能说脏话</tspan></text>
+<text x="110" y="828" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：字符串处理、in / replace / 切片</tspan></text>
+<text x="110" y="856" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：敏感词过滤、识别命令</tspan></text>
+<rect class="shape" x="570" y="752" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="752" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="594" y="770" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="623" y="778" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">08</text>
+<rect class="shape" x="930" y="770" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="778" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="772" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">按稀有度排列你的战利品</tspan></text>
+<text x="600" y="828" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：排序 sort / sorted、比较思想</tspan></text>
+<text x="600" y="856" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：背包按数量 / 稀有度排序</tspan></text>
+<rect class="shape" x="1060" y="752" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="752" width="12" height="132" rx="6" fill="#0ca678"/>
+<rect class="shape" x="1084" y="770" width="58" height="38" rx="8" fill="#f8fafc" stroke="#0ca678" stroke-width="2"/>
+<text x="1113" y="778" font-size="21" fill="#0ca678" text-anchor="middle" font-weight="700">09</text>
+<rect class="shape" x="1420" y="770" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="778" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="772" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">还原一整场僵尸围城</tspan></text>
+<text x="1090" y="828" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：综合模拟（信奥赛高频题型）</tspan></text>
+<text x="1090" y="856" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：回合制战斗完整流程</tspan></text>
+<rect class="shape" x="60" y="940" width="1480" height="410" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<rect x="60" y="940" width="1480" height="76" rx="18" fill="#1971c2"/>
+<text x="92" y="960" font-size="31" fill="#ffffff" text-anchor="start" font-weight="800">第二阶段：进阶关</text>
+<text x="470" y="964" font-size="24" fill="#f8fafc" text-anchor="start" font-weight="600">对应 CSP-J 初级考点</text>
+<rect class="shape" x="80" y="1040" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="1040" width="12" height="132" rx="6" fill="#1971c2"/>
+<rect class="shape" x="104" y="1058" width="58" height="38" rx="8" fill="#f8fafc" stroke="#1971c2" stroke-width="2"/>
+<text x="133" y="1066" font-size="21" fill="#1971c2" text-anchor="middle" font-weight="700">10</text>
+<rect class="shape" x="440" y="1058" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="1066" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="1060" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">一句话盖起一座城墙</tspan></text>
+<text x="110" y="1116" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：嵌套循环、二维网格</tspan></text>
+<text x="110" y="1144" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：用循环铺 N×M 地图</tspan></text>
+<rect class="shape" x="570" y="1040" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="1040" width="12" height="132" rx="6" fill="#1971c2"/>
+<rect class="shape" x="594" y="1058" width="58" height="38" rx="8" fill="#f8fafc" stroke="#1971c2" stroke-width="2"/>
+<text x="623" y="1066" font-size="21" fill="#1971c2" text-anchor="middle" font-weight="700">11</text>
+<rect class="shape" x="930" y="1058" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="1066" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="1060" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">给每种矿石贴价签</tspan></text>
+<text x="600" y="1116" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：字典 dict、键值对</tspan></text>
+<text x="600" y="1144" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：物品 → 价格 / 数量映射</tspan></text>
+<rect class="shape" x="1060" y="1040" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="1040" width="12" height="132" rx="6" fill="#1971c2"/>
+<rect class="shape" x="1084" y="1058" width="58" height="38" rx="8" fill="#f8fafc" stroke="#1971c2" stroke-width="2"/>
+<text x="1113" y="1066" font-size="21" fill="#1971c2" text-anchor="middle" font-weight="700">12</text>
+<rect class="shape" x="1420" y="1058" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="1066" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="1060" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">破译命令方块</tspan></text>
+<text x="1090" y="1116" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：字符串解析、split</tspan></text>
+<text x="1090" y="1144" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：解析 /give steve diamond</tspan></text>
+<rect class="shape" x="80" y="1196" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="1196" width="12" height="132" rx="6" fill="#1971c2"/>
+<rect class="shape" x="104" y="1214" width="58" height="38" rx="8" fill="#f8fafc" stroke="#1971c2" stroke-width="2"/>
+<text x="133" y="1222" font-size="21" fill="#1971c2" text-anchor="middle" font-weight="700">13</text>
+<rect class="shape" x="440" y="1214" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="1222" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="1216" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">该不该出门冒险？</tspan></text>
+<text x="110" y="1272" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：布尔逻辑 and / or / not、德摩根</tspan></text>
+<text x="110" y="1300" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：多条件组合决策</tspan></text>
+<rect class="shape" x="570" y="1196" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="1196" width="12" height="132" rx="6" fill="#1971c2"/>
+<rect class="shape" x="594" y="1214" width="58" height="38" rx="8" fill="#f8fafc" stroke="#1971c2" stroke-width="2"/>
+<text x="623" y="1222" font-size="21" fill="#1971c2" text-anchor="middle" font-weight="700">14</text>
+<rect class="shape" x="930" y="1214" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="1222" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="1216" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">会算账的自动商店</tspan></text>
+<text x="600" y="1272" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：综合模拟 + 函数封装</tspan></text>
+<text x="600" y="1300" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：买卖结算、找零</tspan></text>
+<rect class="shape" x="60" y="1384" width="1480" height="566" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<rect x="60" y="1384" width="1480" height="76" rx="18" fill="#f08c00"/>
+<text x="92" y="1404" font-size="31" fill="#ffffff" text-anchor="start" font-weight="800">第三阶段：算法关</text>
+<text x="470" y="1408" font-size="24" fill="#f8fafc" text-anchor="start" font-weight="600">对应 CSP-J / S 核心</text>
+<rect class="shape" x="80" y="1484" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="1484" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="104" y="1502" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="133" y="1510" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">15</text>
+<rect class="shape" x="440" y="1502" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="1510" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="1504" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">俄罗斯套娃式的地图</tspan></text>
+<text x="110" y="1560" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：递归入门</tspan></text>
+<text x="110" y="1588" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：探索连通的洞穴</tspan></text>
+<rect class="shape" x="570" y="1484" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="1484" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="594" y="1502" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="623" y="1510" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">16</text>
+<rect class="shape" x="930" y="1502" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="1510" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="1504" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">自动寻路的史蒂夫</tspan></text>
+<text x="600" y="1560" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：深搜 DFS</tspan></text>
+<text x="600" y="1588" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：走迷宫、找出口</tspan></text>
+<rect class="shape" x="1060" y="1484" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="1484" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="1084" y="1502" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="1113" y="1510" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">17</text>
+<rect class="shape" x="1420" y="1502" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="1510" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="1504" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">最短的回家路</tspan></text>
+<text x="1090" y="1560" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：广搜 BFS</tspan></text>
+<text x="1090" y="1588" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：网格最短路径</tspan></text>
+<rect class="shape" x="80" y="1640" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="1640" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="104" y="1658" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="133" y="1666" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">18</text>
+<rect class="shape" x="440" y="1658" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="1666" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="1660" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">背包怎么装最划算？</tspan></text>
+<text x="110" y="1716" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：贪心思想</tspan></text>
+<text x="110" y="1744" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：有限格子装最高价值</tspan></text>
+<rect class="shape" x="570" y="1640" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="1640" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="594" y="1658" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="623" y="1666" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">19</text>
+<rect class="shape" x="930" y="1658" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="1666" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="1660" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">通关攻略的最优解</tspan></text>
+<text x="600" y="1716" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：动态规划入门</tspan></text>
+<text x="600" y="1744" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：最优路线 / 得分</tspan></text>
+<rect class="shape" x="1060" y="1640" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="1640" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="1084" y="1658" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="1113" y="1666" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">20</text>
+<rect class="shape" x="1420" y="1658" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="1666" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="1660" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">电脑到底怎么排序？</tspan></text>
+<text x="1090" y="1716" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：冒泡 / 选择排序原理</tspan></text>
+<text x="1090" y="1744" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：手写排序 vs sort</tspan></text>
+<rect class="shape" x="80" y="1796" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="1796" width="12" height="132" rx="6" fill="#f08c00"/>
+<rect class="shape" x="104" y="1814" width="58" height="38" rx="8" fill="#f8fafc" stroke="#f08c00" stroke-width="2"/>
+<text x="133" y="1822" font-size="21" fill="#f08c00" text-anchor="middle" font-weight="700">21</text>
+<rect class="shape" x="440" y="1814" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="1822" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="1816" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">大 O 是什么？为什么会超时</tspan></text>
+<text x="110" y="1872" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：时间复杂度直觉</tspan></text>
+<text x="110" y="1900" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：慢算法 vs 快算法</tspan></text>
+<rect class="shape" x="60" y="1984" width="1480" height="410" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<rect x="60" y="1984" width="1480" height="76" rx="18" fill="#7048e8"/>
+<text x="92" y="2004" font-size="31" fill="#ffffff" text-anchor="start" font-weight="800">第四阶段：数据结构关</text>
+<text x="470" y="2008" font-size="24" fill="#f8fafc" text-anchor="start" font-weight="600">把世界搭成系统</text>
+<rect class="shape" x="80" y="2084" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="2084" width="12" height="132" rx="6" fill="#7048e8"/>
+<rect class="shape" x="104" y="2102" width="58" height="38" rx="8" fill="#f8fafc" stroke="#7048e8" stroke-width="2"/>
+<text x="133" y="2110" font-size="21" fill="#7048e8" text-anchor="middle" font-weight="700">22</text>
+<rect class="shape" x="440" y="2102" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="2110" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="2104" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">一步一步撤销</tspan></text>
+<text x="110" y="2160" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：栈 stack</tspan></text>
+<text x="110" y="2188" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：撤销放置方块</tspan></text>
+<rect class="shape" x="570" y="2084" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="2084" width="12" height="132" rx="6" fill="#7048e8"/>
+<rect class="shape" x="594" y="2102" width="58" height="38" rx="8" fill="#f8fafc" stroke="#7048e8" stroke-width="2"/>
+<text x="623" y="2110" font-size="21" fill="#7048e8" text-anchor="middle" font-weight="700">23</text>
+<rect class="shape" x="930" y="2102" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="2110" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="2104" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">排队等着被处理</tspan></text>
+<text x="600" y="2160" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：队列 queue</tspan></text>
+<text x="600" y="2188" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：任务 / 刷怪队列</tspan></text>
+<rect class="shape" x="1060" y="2084" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="2084" width="12" height="132" rx="6" fill="#7048e8"/>
+<rect class="shape" x="1084" y="2102" width="58" height="38" rx="8" fill="#f8fafc" stroke="#7048e8" stroke-width="2"/>
+<text x="1113" y="2110" font-size="21" fill="#7048e8" text-anchor="middle" font-weight="700">24</text>
+<rect class="shape" x="1420" y="2102" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="2110" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="2104" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">技能树长什么样</tspan></text>
+<text x="1090" y="2160" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：树 tree</tspan></text>
+<text x="1090" y="2188" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：科技 / 技能树结构</tspan></text>
+<rect class="shape" x="80" y="2240" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="2240" width="12" height="132" rx="6" fill="#7048e8"/>
+<rect class="shape" x="104" y="2258" width="58" height="38" rx="8" fill="#f8fafc" stroke="#7048e8" stroke-width="2"/>
+<text x="133" y="2266" font-size="21" fill="#7048e8" text-anchor="middle" font-weight="700">25</text>
+<rect class="shape" x="440" y="2258" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="2266" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="2260" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">传送门连成的网络</tspan></text>
+<text x="110" y="2316" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：图 graph 基础</tspan></text>
+<text x="110" y="2344" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：传送门节点与边</tspan></text>
+<rect class="shape" x="60" y="2428" width="1480" height="410" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<rect x="60" y="2428" width="1480" height="76" rx="18" fill="#e03131"/>
+<text x="92" y="2448" font-size="31" fill="#ffffff" text-anchor="start" font-weight="800">语言迁移专题</text>
+<text x="470" y="2452" font-size="24" fill="#f8fafc" text-anchor="start" font-weight="600">从 Python 到 C++ · 信奥赛必修</text>
+<rect class="shape" x="80" y="2528" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="2528" width="12" height="132" rx="6" fill="#e03131"/>
+<rect class="shape" x="104" y="2546" width="58" height="38" rx="8" fill="#f8fafc" stroke="#e03131" stroke-width="2"/>
+<text x="133" y="2554" font-size="21" fill="#e03131" text-anchor="middle" font-weight="700">M1</text>
+<rect class="shape" x="440" y="2546" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="2554" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="2548" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">为什么信奥赛必须用 C++</tspan></text>
+<text x="110" y="2604" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：比赛规则、Python 超时问题</tspan></text>
+<text x="110" y="2632" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：管理预期</tspan></text>
+<rect class="shape" x="570" y="2528" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="2528" width="12" height="132" rx="6" fill="#e03131"/>
+<rect class="shape" x="594" y="2546" width="58" height="38" rx="8" fill="#f8fafc" stroke="#e03131" stroke-width="2"/>
+<text x="623" y="2554" font-size="21" fill="#e03131" text-anchor="middle" font-weight="700">M2</text>
+<rect class="shape" x="930" y="2546" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="2554" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="2548" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">同一个背包程序，两种写法</tspan></text>
+<text x="600" y="2604" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：Python ↔ C++ 语法映射</tspan></text>
+<text x="600" y="2632" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：用熟悉例子迁移</tspan></text>
+<rect class="shape" x="1060" y="2528" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="2528" width="12" height="132" rx="6" fill="#e03131"/>
+<rect class="shape" x="1084" y="2546" width="58" height="38" rx="8" fill="#f8fafc" stroke="#e03131" stroke-width="2"/>
+<text x="1113" y="2554" font-size="21" fill="#e03131" text-anchor="middle" font-weight="700">M3</text>
+<rect class="shape" x="1420" y="2546" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="2554" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="2548" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">cout / cin 与大括号</tspan></text>
+<text x="1090" y="2604" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：输出输入、代码块</tspan></text>
+<text x="1090" y="2632" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：缩进 vs 括号</tspan></text>
+<rect class="shape" x="80" y="2684" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="80" y="2684" width="12" height="132" rx="6" fill="#e03131"/>
+<rect class="shape" x="104" y="2702" width="58" height="38" rx="8" fill="#f8fafc" stroke="#e03131" stroke-width="2"/>
+<text x="133" y="2710" font-size="21" fill="#e03131" text-anchor="middle" font-weight="700">M4</text>
+<rect class="shape" x="440" y="2702" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="478" y="2710" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="176" y="2704" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="176" dy="0">类型、数组越界、int 溢出</tspan></text>
+<text x="110" y="2760" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="110" dy="0">知识：C++ 独有硬概念</tspan></text>
+<text x="110" y="2788" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="110" dy="0">场景：重建安全感</tspan></text>
+<rect class="shape" x="570" y="2684" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="570" y="2684" width="12" height="132" rx="6" fill="#e03131"/>
+<rect class="shape" x="594" y="2702" width="58" height="38" rx="8" fill="#f8fafc" stroke="#e03131" stroke-width="2"/>
+<text x="623" y="2710" font-size="21" fill="#e03131" text-anchor="middle" font-weight="700">M5</text>
+<rect class="shape" x="930" y="2702" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="968" y="2710" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="666" y="2704" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="666" dy="0">读懂 C++ 的报错</tspan></text>
+<text x="600" y="2760" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="600" dy="0">知识：编译错误 vs 运行错误</tspan></text>
+<text x="600" y="2788" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="600" dy="0">场景：会看错误信息</tspan></text>
+<rect class="shape" x="1060" y="2684" width="460" height="132" rx="10" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="1060" y="2684" width="12" height="132" rx="6" fill="#e03131"/>
+<rect class="shape" x="1084" y="2702" width="58" height="38" rx="8" fill="#f8fafc" stroke="#e03131" stroke-width="2"/>
+<text x="1113" y="2710" font-size="21" fill="#e03131" text-anchor="middle" font-weight="700">M6</text>
+<rect class="shape" x="1420" y="2702" width="76" height="34" rx="8" fill="#f1f3f5" stroke="#868e96" stroke-width="2"/>
+<text x="1458" y="2710" font-size="18" fill="#868e96" text-anchor="middle" font-weight="700">待写</text>
+<text x="1156" y="2704" font-size="24" fill="#111827" text-anchor="start" font-weight="700"><tspan x="1156" dy="0">STL 速通</tspan></text>
+<text x="1090" y="2760" font-size="19" fill="#334155" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">知识：vector / string / sort / map</tspan></text>
+<text x="1090" y="2788" font-size="19" fill="#475569" text-anchor="start" font-weight="500"><tspan x="1090" dy="0">场景：对照 list / dict / sorted</tspan></text>
+<rect class="shape" x="60" y="2872" width="1480" height="250" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+<rect x="60" y="2872" width="1480" height="76" rx="18" fill="#334155"/>
+<text x="92" y="2892" font-size="31" fill="#ffffff" text-anchor="start" font-weight="800">第五阶段：实战关</text>
+<text x="392" y="2896" font-size="24" fill="#f8fafc" text-anchor="start" font-weight="600">长期推进 · 把知识变成比赛和项目能力</text>
+<rect class="shape" x="115" y="2987" width="410" height="88" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="143" y="3014" font-size="25" fill="#111827" text-anchor="start" font-weight="700">历年 NOIP / CSP-J 真题拆解</text>
+<rect class="shape" x="585" y="2987" width="410" height="88" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="613" y="3014" font-size="25" fill="#111827" text-anchor="start" font-weight="700">从零写一个完整小游戏</text>
+<rect class="shape" x="1055" y="2987" width="410" height="88" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+<text x="1083" y="3014" font-size="25" fill="#111827" text-anchor="start" font-weight="700">模拟赛与复盘</text>
+<text x="80" y="2690" font-size="25" fill="#475569" text-anchor="start" font-weight="500">风格锚点：先猜后讲 · 游戏场景引入 · 翻译成人话 · I-do → We-do → You-do</text>
+</svg>

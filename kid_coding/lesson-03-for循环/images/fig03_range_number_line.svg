@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="23"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", sans-serif; dominant-baseline: hanging; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+    
+  </style>
+<text class="" x="250" y="42" font-size="39" fill="#111827" text-anchor="start">range：从哪开始、到哪之前停</text>
+<text class="" x="150" y="120" font-size="31" fill="#0b4f7a" text-anchor="start">range(5) → 0,1,2,3,4（从 0 开始，5 个）</text>
+<line class="shape" x1="150" y1="255" x2="940" y2="255" stroke="#495057" stroke-width="4" marker-end="url(#arrow-black)"/>
+<rect class="shape" x="155" y="205" width="68" height="68" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<line class="shape" x1="185" y1="242" x2="185" y2="272" stroke="#495057" stroke-width="3"/>
+<text class="" x="175" y="215" font-size="34" fill="#087f5b" text-anchor="start">0</text>
+<rect class="shape" x="275" y="205" width="68" height="68" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<line class="shape" x1="305" y1="242" x2="305" y2="272" stroke="#495057" stroke-width="3"/>
+<text class="" x="295" y="215" font-size="34" fill="#087f5b" text-anchor="start">1</text>
+<rect class="shape" x="395" y="205" width="68" height="68" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<line class="shape" x1="425" y1="242" x2="425" y2="272" stroke="#495057" stroke-width="3"/>
+<text class="" x="415" y="215" font-size="34" fill="#087f5b" text-anchor="start">2</text>
+<rect class="shape" x="515" y="205" width="68" height="68" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<line class="shape" x1="545" y1="242" x2="545" y2="272" stroke="#495057" stroke-width="3"/>
+<text class="" x="535" y="215" font-size="34" fill="#087f5b" text-anchor="start">3</text>
+<rect class="shape" x="635" y="205" width="68" height="68" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<line class="shape" x1="665" y1="242" x2="665" y2="272" stroke="#495057" stroke-width="3"/>
+<text class="" x="655" y="215" font-size="34" fill="#087f5b" text-anchor="start">4</text>
+<line class="shape" x1="785" y1="242" x2="785" y2="272" stroke="#495057" stroke-width="3"/>
+<text class="" x="775" y="215" font-size="34" fill="#495057" text-anchor="start">5</text>
+<line class="shape" x1="785" y1="185" x2="785" y2="330" stroke="#e03131" stroke-width="7"/>
+<text class="" x="808" y="195" font-size="29" fill="#e03131" text-anchor="start">到 5 之前停</text>
+<text class="" x="170" y="345" font-size="30" fill="#e03131" text-anchor="start">别踩坑：range(5) 不是从 1 到 5</text>
+<text class="" x="150" y="450" font-size="31" fill="#0b4f7a" text-anchor="start">range(1, 6) → 1,2,3,4,5</text>
+<line class="shape" x1="420" y1="535" x2="880" y2="535" stroke="#495057" stroke-width="4" marker-end="url(#arrow-black)"/>
+<rect class="shape" x="418" y="500" width="52" height="52" rx="10" fill="#eef6ff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="432" y="511" font-size="26" fill="#0b4f7a" text-anchor="start">1</text>
+<rect class="shape" x="488" y="500" width="52" height="52" rx="10" fill="#eef6ff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="502" y="511" font-size="26" fill="#0b4f7a" text-anchor="start">2</text>
+<rect class="shape" x="558" y="500" width="52" height="52" rx="10" fill="#eef6ff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="572" y="511" font-size="26" fill="#0b4f7a" text-anchor="start">3</text>
+<rect class="shape" x="628" y="500" width="52" height="52" rx="10" fill="#eef6ff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="642" y="511" font-size="26" fill="#0b4f7a" text-anchor="start">4</text>
+<rect class="shape" x="698" y="500" width="52" height="52" rx="10" fill="#eef6ff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="712" y="511" font-size="26" fill="#0b4f7a" text-anchor="start">5</text>
+<text class="" x="782" y="511" font-size="26" fill="#495057" text-anchor="start">6</text>
+<line class="shape" x1="790" y1="487" x2="790" y2="585" stroke="#e03131" stroke-width="5"/>
+<text class="" x="813" y="500" font-size="25" fill="#e03131" text-anchor="start">到 6 前停</text>
+</svg>

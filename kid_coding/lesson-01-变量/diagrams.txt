@@ -1,0 +1,14 @@
+# 概念图配置（B方案：手绘风 excalidraw 风格，纯本地渲染，不影响文章正文）。
+
+[[diagram]]
+title: 变量 = 贴标签的箱子
+note: code | hp = 20
+box: hp | hp | big=20 | color=amber
+arrow: code -> hp | 放进去
+
+[[diagram]]
+title: 引号 vs 数字：文字还是数字？
+box: name | name | big=史蒂夫 | color=blue
+box: hpbox | hp | big=20 | color=green
+text: t1 | 加引号 = 文字
+text: t2 | 不加引号 = 数字

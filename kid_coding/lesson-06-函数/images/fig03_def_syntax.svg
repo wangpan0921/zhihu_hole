@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="41"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#7048e8"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+    .ex-canvas { filter: invert(93%) hue-rotate(180deg); }
+  </style>
+  <g class="ex-canvas">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<text class="" x="150" y="35" font-size="36" fill="#111827" text-anchor="start">拆开看这一行：一台机器怎么造出来？</text>
+<text class="code" x="90" y="110" font-size="40" fill="#111827" text-anchor="start">def make_sword(material):</text>
+<line class="shape" x1="115" y1="160" x2="115" y2="200" stroke="#1971c2" stroke-width="3" marker-end="url(#arrow-blue)"/>
+<rect class="shape" x="50" y="205" width="180" height="70" rx="14" fill="#e7f5ff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="70" y="220" font-size="22" fill="#0b4f7a" text-anchor="start">我要造一台</text>
+<text class="" x="70" y="248" font-size="22" fill="#0b4f7a" text-anchor="start">机器！</text>
+<line class="shape" x1="280" y1="160" x2="280" y2="200" stroke="#7048e8" stroke-width="3" marker-end="url(#arrow-purple)"/>
+<rect class="shape" x="220" y="205" width="180" height="70" rx="14" fill="#f3f0ff" stroke="#7048e8" stroke-width="3"/>
+<text class="" x="240" y="220" font-size="22" fill="#5f3dc4" text-anchor="start">机器的名字</text>
+<line class="shape" x1="560" y1="160" x2="560" y2="200" stroke="#f08c00" stroke-width="3" marker-end="url(#arrow-orange)"/>
+<rect class="shape" x="460" y="205" width="220" height="70" rx="14" fill="#fff4cc" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="480" y="220" font-size="22" fill="#b35c00" text-anchor="start">投料口 = 参数</text>
+<line class="shape" x1="790" y1="160" x2="790" y2="200" stroke="#868e96" stroke-width="3" marker-end="url(#arrow-black)"/>
+<rect class="shape" x="720" y="205" width="200" height="70" rx="14" fill="#f1f3f5" stroke="#495057" stroke-width="3"/>
+<text class="" x="740" y="220" font-size="21" fill="#343a40" text-anchor="start">冒号：下面是</text>
+<text class="" x="740" y="248" font-size="21" fill="#343a40" text-anchor="start">机器内部</text>
+<text class="code" x="90" y="340" font-size="40" fill="#111827" text-anchor="start">&#160;&#160;&#160;&#160;return material + "剑"</text>
+<line class="shape" x1="200" y1="390" x2="200" y2="430" stroke="#0ca678" stroke-width="3" marker-end="url(#arrow-green)"/>
+<rect class="shape" x="90" y="435" width="220" height="70" rx="14" fill="#e6fcf5" stroke="#0ca678" stroke-width="3"/>
+<text class="" x="110" y="450" font-size="22" fill="#087f5b" text-anchor="start">把成品端出去！</text>
+<line class="shape" x1="115" y1="390" x2="115" y2="550" stroke="#e03131" stroke-width="3" marker-end="url(#arrow-red)"/>
+<rect class="shape" x="400" y="480" width="260" height="90" rx="14" fill="#fff5f5" stroke="#e03131" stroke-width="3"/>
+<text class="" x="420" y="498" font-size="22" fill="#c92a2a" text-anchor="start">缩进 = 篱笆，</text>
+<text class="" x="420" y="526" font-size="22" fill="#c92a2a" text-anchor="start">圈出机器内部</text>
+  </g>
+</svg>

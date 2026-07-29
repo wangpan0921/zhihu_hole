@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="41"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#7048e8"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+    .ex-canvas { filter: invert(93%) hue-rotate(180deg); }
+  </style>
+  <g class="ex-canvas">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<text class="" x="210" y="40" font-size="38" fill="#111827" text-anchor="start">函数 = 你自己造的机器</text>
+<rect class="shape" x="400" y="200" width="400" height="250" rx="16" fill="#495057" stroke="#212529" stroke-width="5"/>
+<text class="" x="470" y="300" font-size="32" fill="#f8fafc" text-anchor="start">make_sword</text>
+<text class="code" x="455" y="345" font-size="21" fill="#d1fae5" text-anchor="start">return material + "剑"</text>
+<path class="shape" d="M120 190 L280 190 L240 260 L160 260 Z" fill="#fff4cc" stroke="#f08c00" stroke-width="4"/>
+<rect class="shape" x="178" y="150" width="65" height="45" rx="6" fill="#4dabf7" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="190" y="165" font-size="24" fill="#ffffff" text-anchor="start">铁</text>
+<line class="shape" x1="200" y1="260" x2="200" y2="200" stroke="#f08c00" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<text class="" x="115" y="285" font-size="26" fill="#b35c00" text-anchor="start">参数 material</text>
+<line class="shape" x1="280" y1="300" x2="400" y2="300" stroke="#f08c00" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<path class="shape" d="M800 260 L960 260 L1000 320 L920 380 L840 320 Z" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<line class="shape" x1="800" y1="320" x2="700" y2="320" stroke="#0ca678" stroke-width="4" marker-end="url(#arrow-green)"/>
+<rect class="shape" x="895" y="285" width="75" height="24" rx="4" fill="#adb5bd" stroke="#495057" stroke-width="2"/>
+<text class="" x="900" y="291" font-size="18" fill="#111827" text-anchor="start">铁剑</text>
+<text class="" x="845" y="405" font-size="26" fill="#087f5b" text-anchor="start">返回值 铁剑</text>
+<text class="" x="230" y="490" font-size="27" fill="#495057" text-anchor="start">投料 → 加工 → 出料，套路只写一次，永远备用。</text>
+  </g>
+</svg>

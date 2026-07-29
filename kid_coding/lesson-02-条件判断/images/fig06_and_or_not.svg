@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="12"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.2"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#1e1e1e"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#e03131"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#1971c2"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#f08c00"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#0ca678"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", sans-serif; dominant-baseline: hanging; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+  </style>
+<text x="120" y="45" font-size="38" fill="#111827" text-anchor="start">and 都要满足 / or 满足一个 / not 反过来</text>
+<rect class="shape" x="85" y="145" width="270" height="300" rx="10" fill="#e6fcf5" stroke="#0ca678" stroke-width="4"/>
+<text x="115" y="170" font-size="46" fill="#0ca678" text-anchor="start">and</text>
+<text x="115" y="390" font-size="24" fill="#1e1e1e" text-anchor="start">两个都打勾，灯才亮</text>
+<rect class="shape" x="410" y="145" width="270" height="300" rx="10" fill="#e7f5ff" stroke="#1971c2" stroke-width="4"/>
+<text x="440" y="170" font-size="46" fill="#1971c2" text-anchor="start">or</text>
+<text x="440" y="390" font-size="24" fill="#1e1e1e" text-anchor="start">有一个打勾，灯就亮</text>
+<rect class="shape" x="735" y="145" width="270" height="300" rx="10" fill="#fff4cc" stroke="#f08c00" stroke-width="4"/>
+<text x="765" y="170" font-size="46" fill="#f08c00" text-anchor="start">not</text>
+<text x="765" y="390" font-size="24" fill="#1e1e1e" text-anchor="start">真和假反过来</text>
+<rect class="shape" x="130" y="250" width="50" height="50" rx="10" fill="#ffffff" stroke="#0ca678" stroke-width="3"/>
+<text x="140" y="252" font-size="44" fill="#0ca678" text-anchor="start">✓</text>
+<rect class="shape" x="210" y="250" width="50" height="50" rx="10" fill="#ffffff" stroke="#0ca678" stroke-width="3"/>
+<text x="220" y="252" font-size="44" fill="#0ca678" text-anchor="start">✓</text>
+<line class="shape" x1="175" y1="330" x2="248" y2="330" stroke="#0ca678" stroke-width="4" marker-end="url(#arrow-green)"/>
+<ellipse class="shape" cx="289" cy="335" rx="24" ry="35" fill="#fff9db" stroke="#f59f00" stroke-width="3"/>
+<polyline class="shape" points="289,370 289,405" fill="none" stroke="#f59f00" stroke-width="3"/>
+<rect class="shape" x="455" y="250" width="50" height="50" rx="10" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text x="465" y="252" font-size="44" fill="#1971c2" text-anchor="start">✓</text>
+<rect class="shape" x="535" y="250" width="50" height="50" rx="10" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text x="550" y="254" font-size="44" fill="#868e96" text-anchor="start">×</text>
+<line class="shape" x1="500" y1="330" x2="573" y2="330" stroke="#1971c2" stroke-width="4" marker-end="url(#arrow-blue)"/>
+<ellipse class="shape" cx="614" cy="335" rx="24" ry="35" fill="#fff9db" stroke="#f59f00" stroke-width="3"/>
+<polyline class="shape" points="614,370 614,405" fill="none" stroke="#f59f00" stroke-width="3"/>
+<text x="785" y="235" font-size="36" fill="#0ca678" text-anchor="start">True</text>
+<line class="shape" x1="865" y1="252" x2="955" y2="252" stroke="#f08c00" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<text x="965" y="235" font-size="36" fill="#e03131" text-anchor="start">False</text>
+<text x="785" y="330" font-size="36" fill="#e03131" text-anchor="start">False</text>
+<line class="shape" x1="885" y1="347" x2="955" y2="347" stroke="#f08c00" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<text x="965" y="330" font-size="36" fill="#0ca678" text-anchor="start">True</text>
+</svg>

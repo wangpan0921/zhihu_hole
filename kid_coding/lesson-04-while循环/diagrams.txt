@@ -1,0 +1,9 @@
+# 概念图配置（B方案：手绘风 excalidraw 风格，纯本地渲染，不影响文章正文）。
+# 每张图一个 [[diagram]] 块；box/text/note 自动从左到右排版（超宽自动换行）；
+# arrow 用 name -> name 连接两个元素。想加图就取消下面示例的注释并修改。
+
+# [[diagram]]
+# title: 变量 = 贴标签的箱子
+# box: hp | hp | big=20 | color=amber
+# note: code | hp = 20
+# arrow: code -> hp | 放进去

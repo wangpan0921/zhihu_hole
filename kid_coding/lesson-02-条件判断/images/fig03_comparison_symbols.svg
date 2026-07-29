@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="12"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.2"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#1e1e1e"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#e03131"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#1971c2"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#f08c00"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#0ca678"/>
+    </marker>
+  </defs>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", sans-serif; dominant-baseline: hanging; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+  </style>
+<text x="75" y="45" font-size="38" fill="#111827" text-anchor="start">比较符号表：让判断更聪明</text>
+<rect class="shape" x="90" y="135" width="180" height="82" rx="10" fill="#eef6ff" stroke="#1c7ed6" stroke-width="3"/>
+<text x="118" y="155" font-size="38" fill="#0b4f7a" text-anchor="start">&gt;</text>
+<text x="180" y="163" font-size="28" fill="#1e1e1e" text-anchor="start">大于</text>
+<rect class="shape" x="330" y="135" width="180" height="82" rx="10" fill="#eef6ff" stroke="#1c7ed6" stroke-width="3"/>
+<text x="358" y="155" font-size="38" fill="#0b4f7a" text-anchor="start">&lt;</text>
+<text x="420" y="163" font-size="28" fill="#1e1e1e" text-anchor="start">小于</text>
+<rect class="shape" x="90" y="255" width="180" height="82" rx="10" fill="#eef6ff" stroke="#1c7ed6" stroke-width="3"/>
+<text x="118" y="275" font-size="38" fill="#0b4f7a" text-anchor="start">&gt;=</text>
+<text x="180" y="283" font-size="24" fill="#1e1e1e" text-anchor="start">大于等于</text>
+<rect class="shape" x="330" y="255" width="180" height="82" rx="10" fill="#eef6ff" stroke="#1c7ed6" stroke-width="3"/>
+<text x="358" y="275" font-size="38" fill="#0b4f7a" text-anchor="start">&lt;=</text>
+<text x="420" y="283" font-size="24" fill="#1e1e1e" text-anchor="start">小于等于</text>
+<rect class="shape" x="90" y="375" width="180" height="82" rx="10" fill="#eef6ff" stroke="#1c7ed6" stroke-width="3"/>
+<text x="118" y="395" font-size="38" fill="#0b4f7a" text-anchor="start">==</text>
+<text x="180" y="403" font-size="28" fill="#1e1e1e" text-anchor="start">等于</text>
+<rect class="shape" x="330" y="375" width="180" height="82" rx="10" fill="#eef6ff" stroke="#1c7ed6" stroke-width="3"/>
+<text x="358" y="395" font-size="38" fill="#0b4f7a" text-anchor="start">!=</text>
+<text x="420" y="403" font-size="28" fill="#1e1e1e" text-anchor="start">不等于</text>
+<polyline class="shape" points="590,105 590,500" fill="none" stroke="#adb5bd" stroke-width="3"/>
+<text x="685" y="100" font-size="38" fill="#e03131" text-anchor="start">= 和 == 不一样</text>
+<rect class="shape" x="670" y="165" width="360" height="120" rx="10" fill="#fff4cc" stroke="#f08c00" stroke-width="3"/>
+<text x="710" y="188" font-size="54" fill="#f08c00" text-anchor="start">=</text>
+<text x="790" y="192" font-size="30" fill="#1e1e1e" text-anchor="start">把右边塞进左边</text>
+<text x="770" y="245" font-size="25" fill="#7c2d12" text-anchor="start">hp = 10</text>
+<rect class="shape" x="670" y="335" width="360" height="120" rx="10" fill="#ffe3e3" stroke="#e03131" stroke-width="4"/>
+<text x="710" y="358" font-size="50" fill="#e03131" text-anchor="start">==</text>
+<text x="810" y="362" font-size="30" fill="#1e1e1e" text-anchor="start">左右一样吗？</text>
+<text x="760" y="418" font-size="25" fill="#7f1d1d" text-anchor="start">hp == 10</text>
+<text x="680" y="505" font-size="30" fill="#e03131" text-anchor="start">新手坑：判断相等时写 ==，不是 =</text>
+</svg>

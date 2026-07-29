@@ -263,6 +263,7 @@ class Slide:
     question: str = ""             # 互动题题干
     explain: str = ""              # 揭晓解释
     pause: float = 0.0             # 题目屏思考停顿秒数（含倒计时）
+    is_reveal: bool = False        # 本页是否是「揭晓答案」quote 起始的页（用于互动题定位插入点）
 
 
 @dataclass
@@ -283,16 +284,36 @@ class Caption:
 
 
 def build_slides(title: str, sections: list[Section]) -> list[Slide]:
+    """把每节内容分页成幻灯片。
+
+    如果某一节内含「揭晓」类 quote 块（我们系列里「先预测/先猜猜看之后揭晓答案」的写法），
+    且该节之后会插入互动题（quiz.txt 里 after 命中该节），揭晓前的内容和揭晓本身必须分开
+    成两页，否则答案会在题目出现前就被读出来/秀在屏幕上。这里统一按「quote 块开头是揭晓」
+    做切分，不管有没有配 quiz，保持行为一致、可预期。
+    """
     slides: list[Slide] = []
     for si, sec in enumerate(sections):
         accent = ACCENTS[si % len(ACCENTS)]
         pages = paginate(sec.blocks)
-        for pi, page in enumerate(pages):
+        # 展开：若某页内部存在「揭晓」quote，从该 quote 前把这一页切成两页。
+        split_pages: list[list[Block]] = []
+        for page in pages:
+            reveal_idx = next(
+                (i for i, b in enumerate(page) if b.kind == "quote" and strip_md(b.text).lstrip().startswith("揭晓")),
+                -1,
+            )
+            if reveal_idx > 0:
+                split_pages.append(page[:reveal_idx])
+                split_pages.append(page[reveal_idx:])
+            else:
+                split_pages.append(page)
+        for pi, page in enumerate(split_pages):
             narr = " ".join(x for x in (speakable(b) for b in page) if x)
             if not narr:
                 narr = sec.title
             head = sec.title if pi == 0 else sec.title + "（续）"
-            slides.append(Slide(head, page, accent, narr))
+            is_reveal = bool(page) and page[0].kind == "quote" and strip_md(page[0].text).lstrip().startswith("揭晓")
+            slides.append(Slide(head, page, accent, narr, is_reveal=is_reveal))
     return slides
 
 
@@ -333,32 +354,48 @@ def load_quiz(folder: Path) -> list[Quiz]:
     cur: dict | None = None
 
     def flush():
-        if cur and cur.get("question") and cur.get("options"):
+        if cur and cur.get("question") and cur.get("opts"):
+            options = [f"{ltr}. {txt}".rstrip() for ltr, txt in cur["opts"]]
             quizzes.append(Quiz(
                 anchor=cur.get("after", ""),
-                question=cur["question"],
-                options=cur["options"],
+                question=cur["question"].strip(),
+                options=options,
                 answer=cur.get("answer", "").strip().upper(),
-                explain=cur.get("explain", ""),
-                pause=float(cur.get("pause", 4) or 4),
+                explain=cur.get("explain", "").strip(),
+                pause=float((cur.get("pause", "4") or "4").strip()),
             ))
 
+    keyre = re.compile(r"^([A-Ea-e]|after|question|answer|explain|pause)\s*[:：]\s*(.*)$")
+    last = None  # ("opt", idx) 或 ("field", name)
     for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if line.startswith("#") or not line:
+        s = raw.strip()
+        if s.startswith("#"):
             continue
-        if line.startswith("[[quiz]]"):
+        if s.startswith("[[quiz]]"):
             flush()
-            cur = {"options": []}
+            cur = {"opts": []}
+            last = None
             continue
-        if cur is None or ":" not in line:
+        if cur is None:
             continue
-        key, val = line.split(":", 1)
-        key, val = key.strip().lower(), val.strip()
-        if key in ("a", "b", "c", "d", "e"):
-            cur["options"].append(f"{key.upper()}. {val}")
-        elif key in ("after", "question", "answer", "explain", "pause"):
-            cur[key] = val
+        mk = keyre.match(s)
+        if mk:
+            k, v = mk.group(1).lower(), mk.group(2)
+            if k in ("a", "b", "c", "d", "e"):
+                cur["opts"].append([k.upper(), v])
+                last = ("opt", len(cur["opts"]) - 1)
+            else:
+                cur[k] = v
+                last = ("field", k)
+            continue
+        # 续行：接到上一个字段/选项（支持多行选项、多行题干/解析）
+        if not s or last is None:
+            continue
+        if last[0] == "opt":
+            i = last[1]
+            cur["opts"][i][1] = (cur["opts"][i][1] + "\n" + s).strip("\n")
+        else:
+            cur[last[1]] = (cur.get(last[1], "") + "\n" + s).strip("\n")
     flush()
     return quizzes
 
@@ -373,7 +410,12 @@ def make_silence(seconds: float, out: Path) -> Path:
 
 
 def insert_quiz_slides(slides: list[Slide], quizzes: list[Quiz]) -> list[Slide]:
-    """按 anchor 把每道题的「出题屏 + 揭晓屏」插到对应小节之后。"""
+    """按 anchor 把每道题的「出题屏 + 揭晓屏」插到对应小节之后。
+
+    若锚点小节内含「揭晓」页（先预测/We-do 类写法在文中自带答案揭晓），插入点必须停在
+    揭晓页之前，否则文章画面和朗读会先把答案说穿，题目就失去意义了。没有揭晓页的小节，
+    仍然跨过其所有「（续）」分页，插到整节之后（维持原行为）。
+    """
     for q in quizzes:
         # 定位锚点小节：优先标题（去掉"（续）"）精确等于 anchor，否则取首个包含 anchor 的
         def base(t: str) -> str:
@@ -393,9 +435,14 @@ def insert_quiz_slides(slides: list[Slide], quizzes: list[Quiz]) -> list[Slide]:
         else:
             idx = start
             while (idx + 1 < len(slides) and slides[idx + 1].kind == "content"
-                   and base(slides[idx + 1].title) == base(slides[start].title)):
-                idx += 1  # 跨过该节的「（续）」分页，插到整节之后
-        opt_read = "；".join(o.replace(".", "，", 1) for o in q.options)
+                   and base(slides[idx + 1].title) == base(slides[start].title)
+                   and not slides[idx + 1].is_reveal):
+                idx += 1  # 跨过该节的「（续）」分页，但绝不跨过揭晓页
+        long_opts = any(("\n" in o or len(o) > 22) for o in q.options)
+        if long_opts:
+            opt_read = "看屏幕上的选项"
+        else:
+            opt_read = "；".join(o.replace(".", "，", 1) for o in q.options)
         q_slide = Slide(
             title="先猜猜看", blocks=[], accent=(217, 140, 20),
             narration=f"{q.question} 选项：{opt_read}。你选哪个？想一想。",
@@ -498,85 +545,14 @@ def make_vertical(src: Path, out: Path) -> None:
 
 # ---------- 画面 ----------
 def caption_lines(narr: str, start: float, dur: float) -> list[Caption]:
-    sec_breaks = "，,、；;：:"
+    """按 narration.txt 里的换行分屏：每一行 = 一屏字幕 + 一次配音停顿，不再自动按标点/长度重新切分。
 
-    def inside_mask(s: str) -> list[bool]:
-        """标记每个字符是否处于括号/引号内部（内部不允许断句）。"""
-        mask = [False] * len(s)
-        paren = 0
-        inq = False
-        for i, ch in enumerate(s):
-            if ch in "(（“":
-                paren += 1
-                mask[i] = True
-            elif ch in ")）”":
-                mask[i] = True
-                paren = max(0, paren - 1)
-            elif ch == '"':
-                inq = not inq
-                mask[i] = True
-            else:
-                mask[i] = paren > 0 or inq
-        return mask
-
-    def chunk(p: str, maxlen: int = 30) -> list[str]:
-        out: list[str] = []
-        while len(p) > maxlen:
-            mask = inside_mask(p)
-            lo = max(0, maxlen - 18)
-            hi = min(maxlen, len(p) - 1)
-            cut = -1
-            # 1) 优先在标点处断，且不在括号/引号内部（避免切碎 input("…") 这类）
-            for i in range(hi, lo, -1):
-                if p[i] in sec_breaks and not mask[i]:
-                    cut = i + 1
-                    break
-            # 2) 其次在空格处断（同样避开括号/引号内部）
-            if cut <= 0:
-                for i in range(hi, lo, -1):
-                    if p[i] == " " and not mask[i]:
-                        cut = i + 1
-                        break
-            if cut <= 0:
-                cut = maxlen
-            # 把紧跟其后的闭合引号/括号/句末标点并入当前屏，避免被甩到下一屏
-            while cut < len(p) and p[cut] in "\"”’）)。！？，、；：,.!?":
-                cut += 1
-            out.append(p[:cut])
-            p = p[cut:]
-        if p:
-            out.append(p)
-        return out
-
-    def sentence_split(line: str) -> list[str]:
-        """按句末标点断句，但括号/引号内部的句末标点不算断点。"""
-        mask = inside_mask(line)
-        parts: list[str] = []
-        start = 0
-        for i, ch in enumerate(line):
-            if ch in "。！？；" and not mask[i]:
-                parts.append(line[start:i + 1])
-                start = i + 1
-        if start < len(line):
-            parts.append(line[start:])
-        return parts
-
-    segs: list[str] = []
-    for line in narr.split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        for p in sentence_split(line):
-            p = p.strip()
-            if not p:
-                continue
-            segs.extend(chunk(p))
-    if not segs:
-        segs = [narr]
-    segs = [s.lstrip("，,、；;。！？：: ") for s in segs]
+    空行会被跳过（不占时长）。每屏时长按该行字数占比分配整段口播时长。
+    """
+    segs = [ln.strip() for ln in narr.split("\n")]
     segs = [s for s in segs if s]
     if not segs:
-        segs = [narr]
+        segs = [narr.strip() or narr]
     weights = [max(4, len(s)) for s in segs]
     tot = sum(weights)
     caps: list[Caption] = []
@@ -630,11 +606,17 @@ def render_quiz(draw, sl: Slide, reveal: bool, countdown: int | None) -> None:
         draw.text((x, y), line, font=F_H2, fill=INK)
         y += F_H2.size + 10
     y += 20
-    for opt in (sl.options or []):
+    opts = sl.options or []
+    def opt_text(o):
+        return o.split(".", 1)[1].strip() if "." in o else o
+    multiline = any("\n" in opt_text(o) for o in opts)
+    of = font(24) if multiline else F_BODY   # 多行/长选项用小字，避免超出画面
+    for opt in opts:
         letter = opt[:1].upper()
         is_ans = reveal and letter == sl.answer
         card_w = CONTENT_W - 360
-        card_h = 84
+        wl = wrap(draw, opt_text(opt), of, card_w - 120)
+        card_h = max(72, 20 + len(wl) * (of.size + 8))
         if is_ans:
             fill, outline, ow = blend(GREEN, PANEL, 0.72), GREEN, 5
         elif reveal:
@@ -646,13 +628,13 @@ def render_quiz(draw, sl: Slide, reveal: bool, countdown: int | None) -> None:
         rounded(draw, (x + 18, y + 16, x + 70, y + 68), blend(chip, PANEL, 0.15), outline=chip, width=2, radius=10)
         lw, lh = tsize(draw, letter, F_BODY_BOLD)
         draw.text((x + 44 - lw // 2, y + 42 - lh // 2), letter, font=F_BODY_BOLD, fill=INK)
-        txt = opt.split(".", 1)[1].strip() if "." in opt else opt
-        tl = wrap(draw, txt, F_BODY, card_w - 120)[:1]
-        if tl:
-            draw.text((x + 92, y + 24), tl[0], font=F_BODY, fill=INK)
+        ty = y + max(16, (card_h - len(wl) * (of.size + 8)) // 2)
+        for line in wl:
+            draw.text((x + 92, ty), line, font=of, fill=INK)
+            ty += of.size + 8
         if is_ans:
             draw.text((x + card_w - 56, y + 18), "✓", font=F_H2, fill=GREEN)
-        y += card_h + 16
+        y += card_h + 14
     if countdown is not None:
         cx, cy = WIDTH - 300, CONTENT_TOP + 70
         draw.ellipse((cx - 90, cy - 90, cx + 90, cy + 90), outline=(217, 140, 20), width=8)
@@ -760,40 +742,57 @@ def find_lesson(n: int) -> tuple[Path, Path]:
 def load_or_init_narration(folder: Path, slides: list[Slide]) -> str:
     """朗读稿（配音+字幕的唯一文本来源）读取或初始化。
 
-    - 若 folder/narration.txt 存在：按 `### N | 标题` 分块，按顺序覆盖各页 narration。
-      在块内改标点、加换行，即可调整配音停顿与字幕断句（换行 = 一次停顿+断句）。
-    - 若不存在：用自动提炼的稿写出该文件，供后续编辑。
-    返回 "loaded" 或 "created"。
+    - 若 folder/narration.txt 存在且其分块标题与当前幻灯片一一对应：按块覆盖各页 narration
+      （尊重你的标点/换行调整）。
+    - 若不存在，或文章改动导致分页/标题与朗读稿对不上：用当前文章重新生成朗读稿
+      （旧稿备份为 narration.txt.bak），避免错位。
+    返回 "created" | "loaded" | "refreshed"。
     """
     path = folder / "narration.txt"
-    if path.exists():
-        blocks: list[str] = []
-        cur: list[str] | None = None
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.startswith("### "):
-                if cur is not None:
-                    blocks.append("\n".join(cur).strip())
-                cur = []
-            elif cur is not None:
-                cur.append(line)
-        if cur is not None:
-            blocks.append("\n".join(cur).strip())
-        for i, b in enumerate(blocks):
-            if i < len(slides) and b:
-                slides[i].narration = b
-        return "loaded"
-    header = [
-        "# 讲解朗读稿（配音与字幕都来自这里；不影响公众号文章正文）。",
-        "# 改标点、加换行即可调整配音停顿与字幕断句：换行 = 一次停顿 + 一次断句。",
-        "# 每个 ### 块对应视频里的一页，顺序请勿改动。改完重新运行本工具渲染即可。",
-        "",
-    ]
-    for i, sl in enumerate(slides):
-        header.append(f"### {i + 1} | {sl.title}")
-        header.append(sl.narration)
-        header.append("")
-    path.write_text("\n".join(header), encoding="utf-8")
-    return "created"
+
+    def write_fresh() -> None:
+        header = [
+            "# 讲解朗读稿（配音与字幕都来自这里；不影响公众号文章正文）。",
+            "# 改标点、加换行即可调整配音停顿与字幕断句：换行 = 一次停顿 + 一次断句。",
+            "# 每个 ### 块对应视频里的一页，标题与顺序请勿改动（改文章后本文件会自动重建）。",
+            "",
+        ]
+        for i, sl in enumerate(slides):
+            header.append(f"### {i + 1} | {sl.title}")
+            header.append(sl.narration)
+            header.append("")
+        path.write_text("\n".join(header), encoding="utf-8")
+
+    if not path.exists():
+        write_fresh()
+        return "created"
+
+    # 解析已有朗读稿：每块 (标题, 正文)
+    titles: list[str] = []
+    texts: list[str] = []
+    cur: list[str] | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("### "):
+            if cur is not None:
+                texts.append("\n".join(cur).strip())
+            head = line[4:].strip()
+            titles.append(head.split("|", 1)[1].strip() if "|" in head else head)
+            cur = []
+        elif cur is not None:
+            cur.append(line)
+    if cur is not None:
+        texts.append("\n".join(cur).strip())
+
+    # 陈旧检测：分块标题必须与当前幻灯片标题逐一一致
+    if titles != [sl.title for sl in slides]:
+        path.replace(path.with_suffix(".txt.bak"))
+        write_fresh()
+        return "refreshed"
+
+    for i, b in enumerate(texts):
+        if i < len(slides) and b:
+            slides[i].narration = b
+    return "loaded"
 
 
 def main() -> int:
@@ -801,6 +800,7 @@ def main() -> int:
     ap.add_argument("--lesson", type=int, required=True)
     ap.add_argument("--vertical", action="store_true", help="额外输出 9:16 竖屏版")
     ap.add_argument("--narration-only", action="store_true", help="只生成/更新朗读稿 narration.txt，不渲染视频")
+    ap.add_argument("--check-narration", action="store_true", help="逐屏对照“画面实际内容”和“narration.txt 里的朗读文字”，不渲染视频")
     args = ap.parse_args()
 
     folder, article_path = find_lesson(args.lesson)
@@ -810,14 +810,32 @@ def main() -> int:
         raise SystemExit("文章解析后没有可用内容")
     slides = build_slides(title, sections)
 
+    if args.check_narration:
+        narr_state = load_or_init_narration(folder, slides)
+        tip = {"created": "已生成", "refreshed": "检测到文章改动，已按新文章重建", "loaded": "已存在"}[narr_state]
+        print(f"朗读稿{tip}：{folder / 'narration.txt'}\n")
+        print("逐屏核对：左边「画面」是这一屏实际会显示的内容（来自文章），右边「朗读」是 narration.txt 里这一屏的文字。")
+        print("标题只保证结构对得上（页数、顺序），文字内容是否互相匹配靠人工核对下面的输出。\n")
+        for i, sl in enumerate(slides):
+            screen_text = " / ".join(b.text.replace("\n", " ") for b in sl.blocks) or "(无正文，仅标题)"
+            print(f"--- 第 {i + 1} 屏 | {sl.title} ---")
+            print(f"  画面：{screen_text[:200]}")
+            print(f"  朗读：{sl.narration[:200]}")
+            print()
+        return 0
+
     narr_state = load_or_init_narration(folder, slides)
     narr_path = folder / "narration.txt"
     if args.narration_only:
-        print(f"朗读稿{'已生成' if narr_state == 'created' else '已存在'}：{narr_path}")
+        tip = {"created": "已生成", "refreshed": "检测到文章改动，已按新文章重建（旧稿存为 narration.txt.bak）", "loaded": "已存在"}[narr_state]
+        print(f"朗读稿{tip}：{narr_path}")
         print("在其中改标点/加换行调整配音停顿与字幕断句，然后重新运行（不加 --narration-only）渲染。")
+        print("手动改完内容（不只是加换行）后，建议先跑一次 --check-narration 核对画面与朗读是否对得上，再渲染。")
         return 0
     if narr_state == "created":
         print(f"（已生成可编辑朗读稿：{narr_path}，本次先用默认稿渲染；想微调停顿就编辑它再重跑）")
+    elif narr_state == "refreshed":
+        print(f"（检测到文章改动、与朗读稿分页不一致，已按当前文章重建 {narr_path}；旧稿备份为 narration.txt.bak，如有手改的停顿请重新应用）", flush=True)
 
     # 互动题（A方案）：读 quiz.txt，把出题屏+揭晓屏插到指定小节之后
     quizzes = load_quiz(folder)

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="41"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+    <marker id="arrow-purple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#7048e8"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+    .ex-canvas { filter: invert(93%) hue-rotate(180deg); }
+  </style>
+  <g class="ex-canvas">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="900" height="1200" fill="#f8fafc"/>
+<rect x="0" y="0" width="900" height="170" fill="#1f2937"/>
+<text class="" x="70" y="48" font-size="44" fill="#ffd8a8" text-anchor="start">第 6 课</text>
+<text class="" x="70" y="98" font-size="52" fill="#ffffff" text-anchor="start">今天你学会了</text>
+<rect class="shape" x="70" y="210" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="233" font-size="25" fill="#111827" text-anchor="start">🏭 函数 = 自己造的机器（def 名字(投料口):）</text>
+<rect class="shape" x="70" y="318" width="760" height="82" rx="12" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="105" y="341" font-size="25" fill="#111827" text-anchor="start">🎯 参数：投料口，可以有 0 / 1 / N 个</text>
+<rect class="shape" x="70" y="426" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="449" font-size="25" fill="#111827" text-anchor="start">📦 return：把成品端出去</text>
+<rect class="shape" x="70" y="534" width="760" height="82" rx="12" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="105" y="557" font-size="25" fill="#111827" text-anchor="start">📢 print ≠ return：喊一嗓子 ≠ 端出成品</text>
+<rect class="shape" x="70" y="642" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="665" font-size="25" fill="#111827" text-anchor="start">🔘 调用：函数名(材料) = 按下开关</text>
+<rect class="shape" x="70" y="750" width="760" height="82" rx="12" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="105" y="773" font-size="25" fill="#111827" text-anchor="start">➡️ 参数按位置对号入座，顺序别错</text>
+<rect class="shape" x="70" y="858" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="881" font-size="25" fill="#111827" text-anchor="start">⚠️ TypeError：投料数量对不上</text>
+<rect x="0" y="1085" width="900" height="115" fill="#111827"/>
+<text class="" x="70" y="1125" font-size="31" fill="#ffffff" text-anchor="start">少儿编程 · Python 入门</text>
+<text class="" x="600" y="1128" font-size="31" fill="#ffd8a8" text-anchor="start">函数 function</text>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "title": "pipdeptree 查不到 extras 依赖时，应该去读包元数据",
+  "source_file": "pipdeptree查不到extras依赖时如何读取包元数据.md",
+  "published_at": "2026-07-12T08:00:29",
+  "article_url": "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit&action=edit&reprint_confirm=0&timestamp=1783814411395&type=77&appmsgid=100000068&token=1751705472&lang=zh_CN",
+  "platform": "wechat_mp"
+}

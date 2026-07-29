@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="41"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.15"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "DejaVu Sans", "Noto Sans CJK SC", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Consolas", monospace; }
+    .ex-canvas { filter: invert(93%) hue-rotate(180deg); }
+  </style>
+  <g class="ex-canvas">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="900" height="1200" fill="#f8fafc"/>
+<rect x="0" y="0" width="900" height="170" fill="#1f2937"/>
+<text class="" x="70" y="48" font-size="44" fill="#ffd8a8" text-anchor="start">第 5 课</text>
+<text class="" x="70" y="98" font-size="52" fill="#ffffff" text-anchor="start">今天你学会了</text>
+<rect class="shape" x="70" y="210" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="233" font-size="27" fill="#111827" text-anchor="start">📦 列表 []：一排格子按顺序放东西</text>
+<rect class="shape" x="70" y="318" width="760" height="82" rx="12" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="105" y="341" font-size="27" fill="#111827" text-anchor="start">0️⃣ 下标从 0 开始（bag[-1] 是最后一格）</text>
+<rect class="shape" x="70" y="426" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="449" font-size="27" fill="#111827" text-anchor="start">🚫 越界 IndexError：伸手掏不存在的格子</text>
+<rect class="shape" x="70" y="534" width="760" height="82" rx="12" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="105" y="557" font-size="27" fill="#111827" text-anchor="start">🔁 遍历 for x in bag：一句话过完每一格</text>
+<rect class="shape" x="70" y="642" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="665" font-size="27" fill="#111827" text-anchor="start">🔢 enumerate：同时拿下标 + 内容</text>
+<rect class="shape" x="70" y="750" width="760" height="82" rx="12" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<text class="" x="105" y="773" font-size="27" fill="#111827" text-anchor="start">➕➖✏️ append 加 / remove 扔 / bag[i]=… 换</text>
+<rect class="shape" x="70" y="858" width="760" height="82" rx="12" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<text class="" x="105" y="881" font-size="27" fill="#111827" text-anchor="start">📏 len(bag)：现在有几样</text>
+<rect x="0" y="1085" width="900" height="115" fill="#111827"/>
+<text class="" x="70" y="1125" font-size="31" fill="#ffffff" text-anchor="start">少儿编程 · Python 入门</text>
+<text class="" x="600" y="1128" font-size="31" fill="#ffd8a8" text-anchor="start">列表 list</text>
+  </g>
+</svg>

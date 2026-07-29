@@ -1,0 +1,7 @@
+{
+  "title": "从 pip 包源码判断版本号，以及 extras（如 [all]）的作用与使用场景",
+  "source_file": "从源码判断pip包版本及extras的作用与使用场景.md",
+  "published_at": "2026-07-08T08:00:59",
+  "article_url": "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit&action=edit&reprint_confirm=0&timestamp=1783468814893&type=77&appmsgid=100000040&token=840102404&lang=zh_CN",
+  "platform": "wechat_mp"
+}

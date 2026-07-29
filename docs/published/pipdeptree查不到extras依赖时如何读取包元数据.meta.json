@@ -1,0 +1,8 @@
+{
+  "title": "pipdeptree 查不到 extras 依赖时，应该去读包元数据",
+  "source_file": "pipdeptree查不到extras依赖时如何读取包元数据.md",
+  "published_at": "2026-07-09T19:00:54",
+  "article_url": "https://zhuanlan.zhihu.com/p/2058626631254684735?just_published=2",
+  "column": "Agent工坊",
+  "platform": "zhihu"
+}
