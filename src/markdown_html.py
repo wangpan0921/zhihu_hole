@@ -7,10 +7,11 @@
 
 改用「自己转 HTML → 触发一次 text/html 粘贴」：
     Draft.js 的 onPaste 会读取 clipboardData 里的 text/html，按标准 HTML 结构
-    （h2 / ul / ol / blockquote / pre>code / strong / code / a）一次性建出对应的
+    （h2 / ul / ol / blockquote / pre>code / table / strong / code / a）一次性建出对应的
     富文本 block，不依赖逐字符输入规则，块结构稳定。
 
-只实现常见子集：标题、无序/有序列表、引用、围栏代码块、加粗、行内代码、链接、段落。
+只实现常见子集：标题、无序/有序列表、引用、围栏代码块、表格、加粗、
+行内代码、链接、段落。
 """
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 _UL_RE = re.compile(r"^\s*[-*+]\s+(.*)$")
 _OL_RE = re.compile(r"^\s*\d+\.\s+(.*)$")
 _FENCE_RE = re.compile(r"^\s*```")
+_TABLE_DELIMITER_RE = re.compile(r":?-{3,}:?")
 
 
 def _inline(text: str) -> str:
@@ -57,6 +59,111 @@ def _inline(text: str) -> str:
 
     tmp = re.sub(r"\x00(\d+)\x00", _restore, tmp)
     return tmp
+
+
+def _split_table_row(line: str) -> List[str] | None:
+    """拆分 Markdown 表格行，保留行内代码和转义竖线。"""
+    cells: List[str] = []
+    current: List[str] = []
+    in_code = False
+    saw_separator = False
+    i = 0
+    while i < len(line):
+        char = line[i]
+        if ord(char) == 92 and i + 1 < len(line) and line[i + 1] == "|":
+            current.append("|")
+            i += 2
+            continue
+        if char == "`":
+            in_code = not in_code
+            current.append(char)
+        elif char == "|" and not in_code:
+            cells.append("".join(current).strip())
+            current = []
+            saw_separator = True
+        else:
+            current.append(char)
+        i += 1
+    cells.append("".join(current).strip())
+
+    if not saw_separator:
+        return None
+    if cells and cells[0] == "":
+        cells.pop(0)
+    if cells and cells[-1] == "":
+        cells.pop()
+    return cells or None
+
+
+def _table_alignment(delimiter: str) -> str | None:
+    delimiter = delimiter.strip()
+    if not _TABLE_DELIMITER_RE.fullmatch(delimiter):
+        return None
+    if delimiter.startswith(":") and delimiter.endswith(":"):
+        return "center"
+    if delimiter.endswith(":"):
+        return "right"
+    if delimiter.startswith(":"):
+        return "left"
+    return ""
+
+
+def _try_table(lines: List[str], start: int) -> tuple[str, int] | None:
+    """若 start 是 GFM 表格表头，则返回 HTML 和表格后的行号。"""
+    if start + 1 >= len(lines):
+        return None
+    headers = _split_table_row(lines[start])
+    delimiters = _split_table_row(lines[start + 1])
+    if not headers or not delimiters or len(headers) != len(delimiters):
+        return None
+
+    alignments = [_table_alignment(cell) for cell in delimiters]
+    if any(alignment is None for alignment in alignments):
+        return None
+
+    def _cell(tag: str, value: str, column: int) -> str:
+        alignment = alignments[column]
+        attr = f" style=\"text-align:{alignment};\"" if alignment else ""
+        return f"<{tag}{attr}>{_inline(value)}</{tag}>"
+
+    out = ["<table>", "<thead>", "<tr>"]
+    out.extend(_cell("th", value, column) for column, value in enumerate(headers))
+    out.extend(["</tr>", "</thead>", "<tbody>"])
+
+    i = start + 2
+    while i < len(lines) and lines[i].strip():
+        row = _split_table_row(lines[i])
+        if row is None:
+            break
+        row = (row + [""] * len(headers))[: len(headers)]
+        out.append("<tr>")
+        out.extend(_cell("td", value, column) for column, value in enumerate(row))
+        out.append("</tr>")
+        i += 1
+
+    out.extend(["</tbody>", "</table>"])
+    return "".join(out), i
+
+
+def count_markdown_tables(md_text: str) -> int:
+    """统计正文中的 GFM 表格，忽略围栏代码块里的表格语法。"""
+    lines = md_text.splitlines()
+    count = 0
+    in_code = False
+    i = 0
+    while i < len(lines):
+        if _FENCE_RE.match(lines[i]):
+            in_code = not in_code
+            i += 1
+            continue
+        if not in_code:
+            table = _try_table(lines, i)
+            if table is not None:
+                count += 1
+                _, i = table
+                continue
+        i += 1
+    return count
 
 
 def markdown_to_html(md_text: str) -> str:
@@ -96,6 +203,14 @@ def markdown_to_html(md_text: str) -> str:
         if line.strip() == "":
             _close_lists()
             i += 1
+            continue
+
+        # GFM 表格：表头下一行必须是 --- / :---: 等分隔行。
+        table = _try_table(lines, i)
+        if table is not None:
+            _close_lists()
+            table_html, i = table
+            out.append(table_html)
             continue
 
         # 标题
@@ -155,6 +270,7 @@ def markdown_to_html(md_text: str) -> str:
                 or _UL_RE.match(nxt)
                 or _OL_RE.match(nxt)
                 or nxt.lstrip().startswith(">")
+                or _try_table(lines, i) is not None
             ):
                 break
             para_lines.append(nxt)

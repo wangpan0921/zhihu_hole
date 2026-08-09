@@ -131,16 +131,67 @@ def _editor_selector(page: Page) -> Optional[str]:
     return None
 
 
-def _paste_html_body(page: Page, body_html: str) -> bool:
+def _count_html_tables(html_text: str) -> int:
+    """统计待粘贴 HTML 中的 table 元素。"""
+    return html_text.lower().count("<table")
+
+
+def _paste_stats_valid(stats: dict, expected_tables: int) -> bool:
+    """校验正文规模、块级结构及表格是否完整进入编辑器。"""
+    return (
+        stats.get("blocks", 0) > 0
+        and stats.get("len", 0) > 50
+        and stats.get("tables", 0) >= expected_tables
+    )
+
+
+def _verify_published_tables(
+    page: Page,
+    published_url: str,
+    expected_tables: int,
+) -> bool:
+    """发布后打开文章页，确认渲染出的表格数没有减少。"""
+    if expected_tables == 0:
+        return True
+    try:
+        page.goto(published_url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(3000)
+        observed = page.evaluate(
+            """() => {
+                const root = document.querySelector(
+                    ".Post-RichTextContainer, article .RichText, article"
+                );
+                return (root || document).querySelectorAll("table").length;
+            }"""
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warning("发布后表格校验失败：%s", e)
+        return False
+
+    log.info(
+        "发布后表格校验：期望 %d 张，页面渲染 %d 张",
+        expected_tables,
+        observed,
+    )
+    return observed >= expected_tables
+
+
+def _paste_html_body(
+    page: Page,
+    body_html: str,
+    *,
+    expected_tables: int = 0,
+) -> bool:
     """首选策略：把 Markdown 转好的 HTML 通过 text/html 粘贴事件塞进 Draft.js。
 
     Draft.js 的 onPaste 会优先读取 clipboardData 里的 text/html，按标准 HTML 结构
-    （h2 / ul / ol / blockquote / pre>code / strong / code / a）一次性建出对应的富
+    （h2 / ul / ol / blockquote / pre>code / table / strong / code / a）一次性建出对应的富
     文本 block。相比逐字符 keyboard.type 依赖 markdown 输入规则，HTML 粘贴的块结构
     稳定，不会出现「列表上下文吞掉后续所有内容、## 与 - 以纯文本出现」的崩坏。
 
-    成功判定：粘贴后编辑器内出现 >0 个块级标签（h2/ul/ol/blockquote/pre），且
-    textContent 长度达到一定规模。
+    成功判定：粘贴后编辑器内出现 >0 个块级标签
+    （h2/ul/ol/blockquote/pre/table），textContent 长度达到一定规模，且表格数
+    不少于 Markdown/HTML 源文档中的表格数。
     """
     sel = _editor_selector(page)
     if sel is None:
@@ -197,24 +248,29 @@ def _paste_html_body(page: Page, body_html: str) -> bool:
         stats = page.evaluate(
             """(s) => {
                 const el = document.querySelector(s);
-                if (!el) return { len: 0, blocks: 0 };
+                if (!el) return { len: 0, blocks: 0, tables: 0 };
                 const blocks = el.querySelectorAll(
-                    'h2,h3,ul,ol,blockquote,pre'
+                    'h2,h3,ul,ol,blockquote,pre,table'
                 ).length;
-                return { len: (el.textContent || '').length, blocks };
+                return {
+                    len: (el.textContent || "").length,
+                    blocks,
+                    tables: el.querySelectorAll("table").length,
+                };
             }""",
             sel,
         )
     except Exception:
-        stats = {"len": 0, "blocks": 0}
+        stats = {"len": 0, "blocks": 0, "tables": 0}
 
     log.info(
-        "html paste → 编辑器内 %d 字 / %d 个块级元素",
+        "html paste → 编辑器内 %d 字 / %d 个块级元素 / %d 张表格",
         stats.get("len", 0),
         stats.get("blocks", 0),
+        stats.get("tables", 0),
     )
-    # 至少要有结构化块，且正文长度不能太短
-    return stats.get("blocks", 0) > 0 and stats.get("len", 0) > 50
+    # 至少要有结构化块、足够正文，并保留所有期望表格。
+    return _paste_stats_valid(stats, expected_tables)
 
 
 CODE_FENCE_RE = re.compile(r"^\s*```")
@@ -621,10 +677,29 @@ def publish_article(
         # 2. 正文：首选「Markdown → HTML → text/html 粘贴」让 Draft.js 一次性
         #    建出 h2/ul/ol/blockquote/pre 等结构化 block；失败再回退到逐字符 type
         #    （type 路径对列表/代码块上下文不可靠，仅作兜底）。
-        from .markdown_html import markdown_to_html
+        from .markdown_html import count_markdown_tables, markdown_to_html
 
         body_html = markdown_to_html(body_md)
-        body_ok = _paste_html_body(page, body_html)
+        source_tables = count_markdown_tables(body_md)
+        generated_tables = _count_html_tables(body_html)
+        expected_tables = max(source_tables, generated_tables)
+        if generated_tables < source_tables:
+            browser.close()
+            raise RuntimeError(
+                f"Markdown 中有 {source_tables} 张表格，但只生成了 "
+                f"{generated_tables} 个 table 元素"
+            )
+
+        body_ok = _paste_html_body(
+            page, body_html, expected_tables=expected_tables
+        )
+        if not body_ok and expected_tables:
+            _shot(page, "03_table_validation_failed")
+            _dump_editor_html(page, "03_table_validation_failed")
+            browser.close()
+            raise RuntimeError(
+                f"知乎编辑器未完整保留 {expected_tables} 张表格，已停止发布"
+            )
         if not body_ok:
             log.warning("HTML 粘贴未达预期，回退到逐行 type")
             # 清空编辑器再走 type 兜底
@@ -683,6 +758,10 @@ def publish_article(
             if m:
                 published_url = f"https://zhuanlan.zhihu.com/p/{m.group(1)}"
         log.info("发布完成：%s", published_url)
+
+        if not _verify_published_tables(page, published_url, expected_tables):
+            _shot(page, "07_published_table_verification_failed")
+            log.error("文章已发布，但发布页表格校验未通过：%s", published_url)
 
         # 顺手刷新登录态
         try:
