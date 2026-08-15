@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="53"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.05"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "Noto Sans CJK SC", "DejaVu Sans", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+    .dash { stroke-dasharray: 10 8; }
+  </style>
+  
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="1200" height="675" fill="#fff7ed"/>
+<rect y="0" width="1200" height="122" fill="#fed7aa"/>
+<rect y="535" width="1200" height="140" fill="#fdba74"/>
+<text class="" x="62" y="32" font-size="48" fill="#7c2d12" text-anchor="start">背包自动整理器</text>
+<text class="" x="848" y="48" font-size="26" fill="#9a3412" text-anchor="start">第 8 课 · 排序</text>
+<rect class="" x="60" y="150" width="470" height="350" rx="14" fill="#7c2d12" stroke="#431407" stroke-width="6"/>
+<rect class="" x="670" y="150" width="470" height="350" rx="14" fill="#7c2d12" stroke="#431407" stroke-width="6"/>
+<text class="" x="295" y="168" font-size="24" fill="#ffedd5" text-anchor="middle">整理前</text>
+<text class="" x="905" y="168" font-size="24" fill="#ffedd5" text-anchor="middle">整理后</text>
+<rect class="" x="108" y="236" width="70" height="70" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="122" y="247" width="42" height="42" fill="#92400e" stroke="#431407" stroke-width="2"/>
+<text class="" x="143" y="290" font-size="12" fill="#431407" text-anchor="middle">烂肉</text>
+<rect class="" x="300" y="332" width="70" height="70" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="314" y="343" width="42" height="42" fill="#22d3ee" stroke="#431407" stroke-width="2"/>
+<text class="" x="335" y="386" font-size="12" fill="#431407" text-anchor="middle">钻石</text>
+<rect class="" x="395" y="224" width="70" height="70" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="409" y="235" width="42" height="42" fill="#cbd5e1" stroke="#431407" stroke-width="2"/>
+<text class="" x="430" y="278" font-size="12" fill="#431407" text-anchor="middle">铁锭</text>
+<rect class="" x="170" y="390" width="70" height="70" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="184" y="401" width="42" height="42" fill="#14b8a6" stroke="#431407" stroke-width="2"/>
+<text class="" x="205" y="444" font-size="12" fill="#431407" text-anchor="middle">珍珠</text>
+<rect class="" x="275" y="226" width="70" height="70" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="289" y="237" width="42" height="42" fill="#facc15" stroke="#431407" stroke-width="2"/>
+<text class="" x="310" y="280" font-size="12" fill="#431407" text-anchor="middle">金锭</text>
+<rect class="" x="718" y="282" width="68" height="68" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="732" y="293" width="40" height="40" fill="#facc15" stroke="#431407" stroke-width="2"/>
+<text class="" x="752" y="334" font-size="12" fill="#431407" text-anchor="middle">金锭</text>
+<rect class="" x="800" y="282" width="68" height="68" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="814" y="293" width="40" height="40" fill="#14b8a6" stroke="#431407" stroke-width="2"/>
+<text class="" x="834" y="334" font-size="12" fill="#431407" text-anchor="middle">珍珠</text>
+<rect class="" x="882" y="282" width="68" height="68" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="896" y="293" width="40" height="40" fill="#cbd5e1" stroke="#431407" stroke-width="2"/>
+<text class="" x="916" y="334" font-size="12" fill="#431407" text-anchor="middle">铁锭</text>
+<rect class="" x="964" y="282" width="68" height="68" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="978" y="293" width="40" height="40" fill="#22d3ee" stroke="#431407" stroke-width="2"/>
+<text class="" x="998" y="334" font-size="12" fill="#431407" text-anchor="middle">钻石</text>
+<rect class="" x="1046" y="282" width="68" height="68" rx="5" fill="#fff7ed" stroke="#7c2d12" stroke-width="3"/>
+<rect x="1060" y="293" width="40" height="40" fill="#92400e" stroke="#431407" stroke-width="2"/>
+<text class="" x="1080" y="334" font-size="12" fill="#431407" text-anchor="middle">烂肉</text>
+<line class="" x1="545" y1="325" x2="650" y2="325" stroke="#f59e0b" stroke-width="10" marker-end="url(#arrow-orange)"/>
+<text class="code" x="598" y="270" font-size="23" fill="#9a3412" text-anchor="middle">SORT</text>
+<ellipse class="shape" cx="595" cy="408" rx="40" ry="40" fill="#fef3c7" stroke="#f59e0b" stroke-width="4"/>
+<line class="" x1="595" y1="368" x2="595" y2="260" stroke="#f59e0b" stroke-width="7"/>
+<line class="" x1="570" y1="385" x2="538" y2="353" stroke="#f59e0b" stroke-width="7"/>
+<line class="" x1="620" y1="385" x2="652" y2="353" stroke="#f59e0b" stroke-width="7"/>
+<text class="" x="62" y="580" font-size="34" fill="#7c2d12" text-anchor="start">选标准 · 定方向 · 一键排好</text>
+<text class="code" x="1138" y="590" font-size="25" fill="#9a3412" text-anchor="end">.sort  ·  sorted  ·  key</text>
+  
+</svg>

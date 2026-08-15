@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="47"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.05"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "Noto Sans CJK SC", "DejaVu Sans", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+    .dash { stroke-dasharray: 10 8; }
+  </style>
+  
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="1200" height="675" fill="#172554"/>
+<rect y="520" width="1200" height="155" fill="#111827"/>
+<rect x="55" y="95" width="1090" height="390" rx="18" fill="#1e293b" stroke="#818cf8" stroke-width="4"/>
+<circle cx="1050" cy="95" r="44" fill="#a5b4fc" opacity="0.78"/>
+<text class="" x="70" y="32" font-size="48" fill="#eef2ff" text-anchor="start">聊天审核机上线</text>
+<text class="" x="845" y="47" font-size="25" fill="#c7d2fe" text-anchor="start">第 7 课 · 字符串处理</text>
+<rect x="156" y="330" width="18" height="18" fill="#4e342e"/>
+<rect x="174" y="330" width="18" height="18" fill="#4e342e"/>
+<rect x="192" y="330" width="18" height="18" fill="#4e342e"/>
+<rect x="210" y="330" width="18" height="18" fill="#4e342e"/>
+<rect x="138" y="348" width="18" height="18" fill="#4e342e"/>
+<rect x="156" y="348" width="18" height="18" fill="#f2c18d"/>
+<rect x="174" y="348" width="18" height="18" fill="#f2c18d"/>
+<rect x="192" y="348" width="18" height="18" fill="#f2c18d"/>
+<rect x="210" y="348" width="18" height="18" fill="#f2c18d"/>
+<rect x="228" y="348" width="18" height="18" fill="#4e342e"/>
+<rect x="138" y="366" width="18" height="18" fill="#f2c18d"/>
+<rect x="156" y="366" width="18" height="18" fill="#263238"/>
+<rect x="174" y="366" width="18" height="18" fill="#263238"/>
+<rect x="192" y="366" width="18" height="18" fill="#263238"/>
+<rect x="210" y="366" width="18" height="18" fill="#263238"/>
+<rect x="228" y="366" width="18" height="18" fill="#f2c18d"/>
+<rect x="156" y="384" width="18" height="18" fill="#5f3dc4"/>
+<rect x="174" y="384" width="18" height="18" fill="#5f3dc4"/>
+<rect x="192" y="384" width="18" height="18" fill="#5f3dc4"/>
+<rect x="210" y="384" width="18" height="18" fill="#5f3dc4"/>
+<rect x="138" y="402" width="18" height="18" fill="#5f3dc4"/>
+<rect x="156" y="402" width="18" height="18" fill="#748ffc"/>
+<rect x="174" y="402" width="18" height="18" fill="#748ffc"/>
+<rect x="192" y="402" width="18" height="18" fill="#748ffc"/>
+<rect x="210" y="402" width="18" height="18" fill="#748ffc"/>
+<rect x="228" y="402" width="18" height="18" fill="#5f3dc4"/>
+<rect x="138" y="420" width="18" height="18" fill="#5f3dc4"/>
+<rect x="156" y="420" width="18" height="18" fill="#748ffc"/>
+<rect x="174" y="420" width="18" height="18" fill="#748ffc"/>
+<rect x="192" y="420" width="18" height="18" fill="#748ffc"/>
+<rect x="210" y="420" width="18" height="18" fill="#748ffc"/>
+<rect x="228" y="420" width="18" height="18" fill="#5f3dc4"/>
+<rect x="156" y="438" width="18" height="18" fill="#263238"/>
+<rect x="174" y="438" width="18" height="18" fill="#263238"/>
+<rect x="192" y="438" width="18" height="18" fill="#263238"/>
+<rect x="210" y="438" width="18" height="18" fill="#263238"/>
+<rect x="138" y="456" width="18" height="18" fill="#263238"/>
+<rect x="228" y="456" width="18" height="18" fill="#263238"/>
+<rect class="" x="340" y="140" width="650" height="335" rx="14" fill="#0f172a" stroke="#64748b" stroke-width="5"/>
+<rect x="370" y="175" width="590" height="250" rx="10" fill="#111827" stroke="#334155" stroke-width="3"/>
+<rect class="" x="400" y="200" width="315" height="48" rx="22" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+<text class="" x="418" y="210" font-size="22" fill="#111827" text-anchor="start">笨蛋苦力怕来了</text>
+<rect class="" x="729" y="203" width="135" height="42" rx="7" fill="#ef4444" stroke="#ef4444" stroke-width="2"/>
+<text class="" x="742" y="212" font-size="18" fill="#ffffff" text-anchor="start">笨蛋 → **</text>
+<rect class="" x="500" y="270" width="345" height="48" rx="22" fill="#fef3c7" stroke="#f59e0b" stroke-width="3"/>
+<text class="" x="518" y="280" font-size="22" fill="#111827" text-anchor="start">他们又要偷家</text>
+<rect class="" x="859" y="273" width="135" height="42" rx="7" fill="#f59e0b" stroke="#f59e0b" stroke-width="2"/>
+<text class="" x="872" y="282" font-size="18" fill="#ffffff" text-anchor="start">偷家 → **</text>
+<rect class="" x="410" y="340" width="470" height="48" rx="22" fill="#dcfce7" stroke="#22c55e" stroke-width="3"/>
+<text class="" x="428" y="350" font-size="22" fill="#111827" text-anchor="start">/give steve diamond</text>
+<rect class="" x="894" y="343" width="135" height="42" rx="7" fill="#22c55e" stroke="#22c55e" stroke-width="2"/>
+<text class="" x="907" y="352" font-size="18" fill="#ffffff" text-anchor="start">命令 ✓</text>
+<text class="code" x="375" y="445" font-size="27" fill="#c7d2fe" text-anchor="start">in  ·  replace  ·  [起:终]</text>
+<rect class="" x="245" y="485" width="34" height="60" rx="5" fill="#475569" stroke="#94a3b8" stroke-width="3"/>
+<rect class="" x="195" y="540" width="135" height="18" rx="4" fill="#475569" stroke="#94a3b8" stroke-width="3"/>
+<text class="" x="65" y="610" font-size="31" fill="#e0e7ff" text-anchor="start">看懂文字 · 屏蔽词语 · 识别命令</text>
+  
+</svg>

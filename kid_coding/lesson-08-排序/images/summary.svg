@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="53"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.05"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "Noto Sans CJK SC", "DejaVu Sans", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+    .dash { stroke-dasharray: 10 8; }
+    .ex-canvas { filter: invert(93%) hue-rotate(180deg); }
+  </style>
+  <g class="ex-canvas">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="900" height="1200" fill="#f8fafc"/>
+<rect x="0" y="0" width="900" height="190" fill="#1f2937"/>
+<text class="" x="65" y="42" font-size="38" fill="#ffd8a8" text-anchor="start">第 8 课 · 知识清单</text>
+<text class="" x="65" y="98" font-size="56" fill="#ffffff" text-anchor="start">排序</text>
+<text class="" x="835" y="132" font-size="22" fill="#cbd5e1" text-anchor="end">《我的世界里学编程》</text>
+<rect class="shape" x="65" y="225" width="770" height="100" rx="10" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<ellipse class="shape" cx="118" cy="275" rx="29" ry="29" fill="#1971c2" stroke="#1971c2" stroke-width="2"/>
+<text class="code" x="118" y="259" font-size="18" fill="#ffffff" text-anchor="middle">01</text>
+<text class="code" x="170" y="243" font-size="28" fill="#111827" text-anchor="start">.sort()</text>
+<text class="" x="170" y="283" font-size="23" fill="#495057" text-anchor="start">原地排，没有返回值</text>
+<rect class="shape" x="65" y="357" width="770" height="100" rx="10" fill="#ffffff" stroke="#f08c00" stroke-width="3"/>
+<ellipse class="shape" cx="118" cy="407" rx="29" ry="29" fill="#f08c00" stroke="#f08c00" stroke-width="2"/>
+<text class="code" x="118" y="391" font-size="18" fill="#ffffff" text-anchor="middle">02</text>
+<text class="code" x="170" y="375" font-size="28" fill="#111827" text-anchor="start">sorted()</text>
+<text class="" x="170" y="415" font-size="23" fill="#495057" text-anchor="start">拷一份排，返回新列表</text>
+<rect class="shape" x="65" y="489" width="770" height="100" rx="10" fill="#ffffff" stroke="#0ca678" stroke-width="3"/>
+<ellipse class="shape" cx="118" cy="539" rx="29" ry="29" fill="#0ca678" stroke="#0ca678" stroke-width="2"/>
+<text class="code" x="118" y="523" font-size="18" fill="#ffffff" text-anchor="middle">03</text>
+<text class="code" x="170" y="507" font-size="28" fill="#111827" text-anchor="start">reverse=True</text>
+<text class="" x="170" y="547" font-size="23" fill="#495057" text-anchor="start">从大到小</text>
+<rect class="shape" x="65" y="621" width="770" height="100" rx="10" fill="#ffffff" stroke="#7048e8" stroke-width="3"/>
+<ellipse class="shape" cx="118" cy="671" rx="29" ry="29" fill="#7048e8" stroke="#7048e8" stroke-width="2"/>
+<text class="code" x="118" y="655" font-size="18" fill="#ffffff" text-anchor="middle">04</text>
+<text class="code" x="170" y="639" font-size="28" fill="#111827" text-anchor="start">key=函数</text>
+<text class="" x="170" y="679" font-size="23" fill="#495057" text-anchor="start">按什么标准比较</text>
+<rect class="shape" x="65" y="753" width="770" height="100" rx="10" fill="#ffffff" stroke="#1971c2" stroke-width="3"/>
+<ellipse class="shape" cx="118" cy="803" rx="29" ry="29" fill="#1971c2" stroke="#1971c2" stroke-width="2"/>
+<text class="code" x="118" y="787" font-size="18" fill="#ffffff" text-anchor="middle">05</text>
+<text class="code" x="170" y="771" font-size="28" fill="#111827" text-anchor="start">列表套列表</text>
+<text class="" x="170" y="811" font-size="23" fill="#495057" text-anchor="start">bag[i][j] 取一格信息</text>
+<rect class="shape" x="65" y="885" width="770" height="100" rx="10" fill="#ffffff" stroke="#e03131" stroke-width="3"/>
+<ellipse class="shape" cx="118" cy="935" rx="29" ry="29" fill="#e03131" stroke="#e03131" stroke-width="2"/>
+<text class="code" x="118" y="919" font-size="18" fill="#ffffff" text-anchor="middle">06</text>
+<text class="code" x="170" y="903" font-size="28" fill="#111827" text-anchor="start">稳定排序</text>
+<text class="" x="170" y="943" font-size="23" fill="#495057" text-anchor="start">平手时保持原顺序</text>
+<rect x="0" y="1085" width="900" height="115" fill="#111827"/>
+<text class="" x="65" y="1117" font-size="29" fill="#ffffff" text-anchor="start">少儿编程 · Python 入门</text>
+<text class="" x="835" y="1121" font-size="29" fill="#ffd8a8" text-anchor="end">背包自动整理器</text>
+  </g>
+</svg>

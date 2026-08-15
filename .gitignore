@@ -24,6 +24,7 @@ data/pending/
 data/published/
 data/images/
 data/books/
+data/wechat_album/
 logs/
 
 # 调试截图

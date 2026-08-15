@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="47"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.05"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "Noto Sans CJK SC", "DejaVu Sans", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+    .dash { stroke-dasharray: 10 8; }
+  </style>
+  
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="1200" height="675" fill="#fff7ed"/>
+<rect y="0" width="1200" height="125" fill="#fed7aa"/>
+<rect y="530" width="1200" height="145" fill="#fdba74"/>
+<text class="" x="65" y="38" font-size="44" fill="#7c2d12" text-anchor="start">按稀有度排好你的战利品</text>
+<text class="" x="965" y="54" font-size="25" fill="#9a3412" text-anchor="start">下一课：排序</text>
+<rect class="" x="155" y="175" width="890" height="330" rx="14" fill="#7c2d12" stroke="#431407" stroke-width="6"/>
+<rect class="" x="185" y="205" width="830" height="270" rx="10" fill="#9a3412" stroke="#431407" stroke-width="4"/>
+<rect class="" x="215" y="235" width="125" height="125" rx="6" fill="#ffedd5" stroke="#7c2d12" stroke-width="4"/>
+<rect x="252" y="265" width="50" height="50" fill="#92400e" stroke="#431407" stroke-width="3"/>
+<text class="" x="277" y="325" font-size="20" fill="#431407" text-anchor="middle">烂肉</text>
+<line class="shape" x1="341" y1="390" x2="365" y2="390" stroke="#f59e0b" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<rect class="" x="370" y="235" width="125" height="125" rx="6" fill="#ffedd5" stroke="#7c2d12" stroke-width="4"/>
+<rect x="407" y="265" width="50" height="50" fill="#cbd5e1" stroke="#431407" stroke-width="3"/>
+<text class="" x="432" y="325" font-size="20" fill="#431407" text-anchor="middle">铁锭</text>
+<line class="shape" x1="496" y1="390" x2="520" y2="390" stroke="#f59e0b" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<rect class="" x="525" y="235" width="125" height="125" rx="6" fill="#ffedd5" stroke="#7c2d12" stroke-width="4"/>
+<rect x="562" y="265" width="50" height="50" fill="#facc15" stroke="#431407" stroke-width="3"/>
+<text class="" x="587" y="325" font-size="20" fill="#431407" text-anchor="middle">金锭</text>
+<line class="shape" x1="651" y1="390" x2="675" y2="390" stroke="#f59e0b" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<rect class="" x="680" y="235" width="125" height="125" rx="6" fill="#ffedd5" stroke="#7c2d12" stroke-width="4"/>
+<rect x="717" y="265" width="50" height="50" fill="#22d3ee" stroke="#431407" stroke-width="3"/>
+<text class="" x="742" y="325" font-size="20" fill="#431407" text-anchor="middle">钻石</text>
+<line class="shape" x1="806" y1="390" x2="830" y2="390" stroke="#f59e0b" stroke-width="4" marker-end="url(#arrow-orange)"/>
+<rect class="" x="835" y="235" width="125" height="125" rx="6" fill="#ffedd5" stroke="#7c2d12" stroke-width="4"/>
+<rect x="872" y="265" width="50" height="50" fill="#14b8a6" stroke="#431407" stroke-width="3"/>
+<text class="" x="897" y="325" font-size="20" fill="#431407" text-anchor="middle">珍珠</text>
+<text class="" x="600" y="405" font-size="26" fill="#ffedd5" text-anchor="middle">普通  →  稀有  →  闪闪发光</text>
+<text class="" x="600" y="575" font-size="34" fill="#7c2d12" text-anchor="middle">让背包自动排队——下期见</text>
+  
+</svg>

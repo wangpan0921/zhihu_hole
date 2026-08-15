@@ -4,6 +4,8 @@
 # 默认时间表：
 #   19:00  预生成「明天」的 morning + evening 两条想法草稿到 data/pending/
 #   08:00  扫 docs/pending/ 发布一篇文章到微信公众号
+#   08:30  通过 publish-wechat-album-to-zhihu Skill 发布合集下一篇
+#   01:00  删除 debug/ 中 7 天以前的调试文件
 #   19:00  扫 docs/pending/ 发布一篇文章到知乎专栏（同一时刻，两条任务并行跑互不影响）
 #   07:00  发布 morning slot 想法（data/pending 没有则现生现发）
 #   18:00  发布 evening slot 想法
@@ -17,9 +19,15 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$PROJECT_DIR/venv/bin/python"
 LOG="$PROJECT_DIR/logs/cron.log"
+WECHAT_ALBUM_SKILL_RUNNER="${WECHAT_ALBUM_SKILL_RUNNER:-/home/wangpan/.codex/skills/publish-wechat-album-to-zhihu/scripts/publish-next.sh}"
 
 if [[ ! -x "$PY" ]]; then
   echo "错误：找不到 $PY ，请先创建 venv 并安装依赖" >&2
+  exit 1
+fi
+
+if [[ ! -x "$WECHAT_ALBUM_SKILL_RUNNER" ]]; then
+  echo "错误：找不到合集发布 Skill 入口：$WECHAT_ALBUM_SKILL_RUNNER" >&2
   exit 1
 fi
 
@@ -33,11 +41,15 @@ RUN_PUB_M="cd $PROJECT_DIR && $PY scripts/publish_slot.py morning >> $LOG 2>&1"
 RUN_PUB_E="cd $PROJECT_DIR && $PY scripts/publish_slot.py evening >> $LOG 2>&1"
 RUN_PUB_ARTICLE="cd $PROJECT_DIR && $PY scripts/publish_articles.py >> $LOG 2>&1"
 RUN_PUB_WECHAT="cd $PROJECT_DIR && $PY scripts/publish_wechat_articles.py >> $LOG 2>&1"
+RUN_PUB_WECHAT_ALBUM="$WECHAT_ALBUM_SKILL_RUNNER >> $LOG 2>&1"
+RUN_CLEANUP_DEBUG="cd $PROJECT_DIR && mkdir -p logs && scripts/cleanup_debug.sh >> logs/debug-cleanup.log 2>&1"
 
-# 6 行任务（含一行注释 tag）
+# 8 行任务（含一行注释 tag）
 read -r -d '' BLOCK <<EOF || true
 $TAG
+0  1 * * *   $RUN_CLEANUP_DEBUG
 0  8 * * *   $RUN_PUB_WECHAT
+30 8 * * *   $RUN_PUB_WECHAT_ALBUM
 0 19 * * *   $RUN_GEN
 0 19 * * *   $RUN_PUB_ARTICLE
 0  7 * * *   $RUN_PUB_M
@@ -45,7 +57,7 @@ $TAG
 EOF
 
 # tag 后面跟着的任务行数（用于 install/uninstall 时整块替换）
-TASK_LINES=5
+TASK_LINES=7
 
 cmd="${1:-status}"
 

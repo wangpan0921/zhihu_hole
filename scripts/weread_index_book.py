@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -76,6 +77,23 @@ def _walk_one_direction(page: Page, label: str, max_steps: int) -> list[str]:
 def _url_chapter_hash(url: str) -> str | None:
     m = re.search(r"/web/reader/[a-z0-9]+k([a-z0-9]+)", url)
     return m.group(1) if m else None
+
+
+def _encode_numeric_id(value: int | str) -> str:
+    """Encode a numeric WeRead book/chapter ID for use in reader URLs."""
+    raw = str(value)
+    digest = hashlib.md5(raw.encode("ascii")).hexdigest()
+    hex_id = format(int(raw), "x")
+    prefix = digest[:3] + "32" + digest[-2:] + f"{len(hex_id):02x}" + hex_id
+    encoded = prefix + digest[:20 - len(prefix)]
+    return encoded + hashlib.md5(encoded.encode("ascii")).hexdigest()[:3]
+
+
+def _reader_url(seed_url: str, chapter_uid: int | str) -> str:
+    match = re.match(r"(https://weread\.qq\.com/web/reader/[a-z0-9]+?)(?:k|\Z)", seed_url)
+    if not match:
+        raise ValueError(f"无法从种子链接提取 reader ID: {seed_url}")
+    return f"{match.group(1)}k{_encode_numeric_id(chapter_uid)}"
 
 
 def index_book(seed_url: str, *, headful: bool = False) -> Path:
@@ -147,7 +165,10 @@ def index_book(seed_url: str, *, headful: bool = False) -> Path:
     chapters_out = []
     for c in chapter_metas:
         uid = c["chapterUid"]
-        url = url_by_uid.get(uid)
+        # The horizontal reader no longer exposes the old chapter buttons.
+        # Reader URLs use WeRead's deterministic numeric-ID encoding, so fill
+        # any URL the browser traversal could not discover directly.
+        url = url_by_uid.get(uid) or _reader_url(seed_url, uid)
         chapters_out.append({
             "chapterUid": uid,
             "chapterIdx": c["chapterIdx"],

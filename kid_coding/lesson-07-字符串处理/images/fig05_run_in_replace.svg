@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <filter id="wobble" x="-3%" y="-3%" width="106%" height="106%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="47"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.05"/>
+    </filter>
+    <marker id="arrow-black" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1e1e1e"/></marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#e03131"/></marker>
+    <marker id="arrow-green" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#0ca678"/></marker>
+    <marker id="arrow-blue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#1971c2"/></marker>
+    <marker id="arrow-orange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#f08c00"/></marker>
+  </defs>
+  <style>
+    text { font-family: "Comic Sans MS", "Noto Sans CJK SC", "DejaVu Sans", sans-serif; dominant-baseline: hanging; letter-spacing: 0; }
+    .shape { filter: url(#wobble); stroke-linejoin: round; stroke-linecap: round; }
+    .code { font-family: "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+    .dash { stroke-dasharray: 10 8; }
+    .ex-canvas { filter: invert(93%) hue-rotate(180deg); }
+  </style>
+  <g class="ex-canvas">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+<rect width="1200" height="675" fill="#f4f6fb"/>
+<rect class="shape" x="55" y="48" width="1090" height="580" rx="8" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<rect x="55" y="48" width="1090" height="50" fill="#f1f3f5" rx="8"/>
+<circle cx="82" cy="73" r="7" fill="#ff5f57"/><circle cx="105" cy="73" r="7" fill="#febc2e"/><circle cx="128" cy="73" r="7" fill="#28c840"/>
+<text class="" x="160" y="61" font-size="23" fill="#111827" text-anchor="start">第 7 课：in + replace 过滤敏感词</text>
+<rect class="shape" x="80" y="120" width="670" height="475" rx="6" fill="#f8fafc" stroke="#d0d7de" stroke-width="2"/>
+<text class="" x="105" y="140" font-size="20" fill="#495057" text-anchor="start">main.py</text>
+<text class="code" x="105" y="184" font-size="19" fill="#111827" text-anchor="start">msg = "笨蛋苦力怕又来偷家"</text>
+<text class="code" x="105" y="209.27" font-size="19" fill="#111827" text-anchor="start"></text>
+<text class="code" x="105" y="234.54000000000002" font-size="19" fill="#111827" text-anchor="start">if "笨蛋" in msg:</text>
+<text class="code" x="105" y="259.81" font-size="19" fill="#111827" text-anchor="start">&#160;&#160;&#160;&#160;print("⚠ 检测到敏感词")</text>
+<text class="code" x="105" y="285.08000000000004" font-size="19" fill="#111827" text-anchor="start"></text>
+<text class="code" x="105" y="310.35" font-size="19" fill="#111827" text-anchor="start">clean = msg.replace("笨蛋", "**").replace("偷家", "**")</text>
+<text class="code" x="105" y="335.62" font-size="19" fill="#111827" text-anchor="start">print("过滤后：", clean)</text>
+<rect class="shape" x="780" y="120" width="335" height="475" rx="6" fill="#f8fafc" stroke="#d0d7de" stroke-width="2"/>
+<text class="" x="805" y="140" font-size="20" fill="#495057" text-anchor="start">运行结果</text>
+<line class="shape" x1="805" y1="176" x2="1090" y2="176" stroke="#d0d7de" stroke-width="2"/>
+<text class="code" x="805" y="205" font-size="19" fill="#087f5b" text-anchor="start">⚠ 检测到敏感词</text>
+<text class="code" x="805" y="233.12" font-size="19" fill="#087f5b" text-anchor="start">过滤后： **苦力怕又来**</text>
+<text class="code" x="805" y="548" font-size="14" fill="#087f5b" text-anchor="start">Process finished with exit code 0</text>
+  </g>
+</svg>

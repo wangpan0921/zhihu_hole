@@ -143,11 +143,20 @@ bash scripts/install_cron.sh status   # 查看
 | 时间 | 动作 |
 | ---- | ---- |
 | 08:00 | 扫 `docs/pending/`，按顺序发布一篇文章到微信公众号 |
+| 08:30 | 从公众号「跟着史蒂夫学编程」合集按正序发布下一篇到同名知乎专栏 |
 | 19:00 | 为「明天」的 morning + evening 各生成一条草稿到 `data/pending/` |
 | 07:00 | 发布当天的 morning 草稿（若没有则现生现发） |
 | 18:00 | 发布当天的 evening 草稿（若没有则现生现发） |
 
 要修改时间，编辑 `scripts/install_cron.sh` 重装，或直接 `crontab -e` 改。
+
+合集任务使用 `publish-wechat-album-to-zhihu` Skill，并用
+`data/wechat_album/state.json` 记录进度；配置中的 `skip_first: 1`
+表示首篇已在知乎存在。手动执行下一篇：
+
+```bash
+/home/wangpan/.codex/skills/publish-wechat-album-to-zhihu/scripts/publish-next.sh
+```
 
 ---
 

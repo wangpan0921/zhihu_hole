@@ -43,6 +43,7 @@ content:
       - "3300200209"   # 《半小时讲透第一性原理（轻思维）》樊中恺
       - "33628204"     # 《认知觉醒：开启自我改变的原动力》周岭
       - "30887804"     # 《故事力》高琳 林宏博
+      - "40425664"     # 《高敏感是种天赋（套装共3册）》[丹]伊尔斯·桑德
     # 书籍池全部读完时发的私信内容（留空用默认提醒文案）
     finish_message: ""
     # （向后兼容）只读一本书时也可以只配 book_id，不配 book_pool：
@@ -89,6 +90,13 @@ image:
 article:
   # 发布弹窗里要选的目标专栏名（按字面文本匹配）
   column_name: "Agent工坊"
+
+# 微信公众号合集 → 独立知乎专栏。每天 08:30 只发布下一篇。
+wechat_album_to_zhihu:
+  album_url: "https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzY5MDM1OTU3Mg==&action=getalbum&album_id=4594165319145046019#wechat_redirect"
+  column_name: "跟着史蒂夫学编程"
+  skip_first: 1
+  state_path: "data/wechat_album/state.json"
 
 # 微信公众号发布配置
 # 每天 08:00 cron 触发 scripts/publish_wechat_articles.py：

@@ -550,6 +550,50 @@ def _enable_column_and_select(page: Page, column_name: str) -> bool:
         except Exception:
             pass
 
+    # Current Zhihu uses a closed combobox inside ColumnSetting-ColumnSelector.
+    # The target option is not in the DOM until this exact combobox is opened.
+    try:
+        dropdown = page.locator(
+            ".ColumnSetting-ColumnSelector button[role='combobox']"
+        ).first
+        if dropdown.count() and dropdown.is_visible():
+            dropdown.click(timeout=3000)
+            page.wait_for_timeout(800)
+            match = page.get_by_text(column_name, exact=True).last
+            if match.count() and match.is_visible():
+                match.click(timeout=3000)
+                log.info("展开专栏下拉框后点中：%s", column_name)
+                page.wait_for_timeout(800)
+                return True
+            page.keyboard.press("Escape")
+    except Exception:
+        pass
+
+    # Keep generic fallbacks for future DOM variants.
+    for sel in (
+        "div.Select-control",
+        "div[class*='Select-control']",
+        "[role='combobox']",
+        "button[aria-haspopup='listbox']",
+    ):
+        try:
+            candidates = page.locator(sel)
+            for i in range(candidates.count() - 1, -1, -1):
+                dropdown = candidates.nth(i)
+                if not dropdown.is_visible():
+                    continue
+                dropdown.click(timeout=3000)
+                page.wait_for_timeout(800)
+                match = page.get_by_text(column_name, exact=True).last
+                if match.count() and match.is_visible():
+                    match.click(timeout=3000)
+                    log.info("展开专栏下拉框后点中：%s", column_name)
+                    page.wait_for_timeout(800)
+                    return True
+                page.keyboard.press("Escape")
+        except Exception:
+            continue
+
     log.warning("没把专栏选上，请看截图")
     return False
 
@@ -580,6 +624,54 @@ def _click_publish_bottom(page: Page) -> bool:
                 continue
         page.wait_for_timeout(400)
     return False
+
+
+def _click_update_bottom(page: Page) -> bool:
+    """点编辑已发布文章时页面右下方的「更新」按钮。"""
+    end = time.time() + 8
+    while time.time() < end:
+        for sel in (
+            "button.PublishPanel-button:has-text('更新')",
+            "button.Button.Button--primary:has-text('更新')",
+            "button.Button--primary:has-text('更新')",
+            "button:has-text('更新')",
+        ):
+            try:
+                cand = page.locator(sel)
+                for i in range(cand.count()):
+                    btn = cand.nth(i)
+                    if btn.is_visible() and btn.is_enabled():
+                        btn.click(timeout=3000)
+                        log.info("已点击底部「更新」按钮：%s", sel)
+                        return True
+            except Exception:
+                continue
+        page.wait_for_timeout(400)
+    return False
+
+
+def _clear_editor_body(page: Page) -> bool:
+    """通过真实键盘事件清空 Draft.js 正文，确保其内部状态同步更新。"""
+    sel = _editor_selector(page)
+    if sel is None:
+        return False
+    try:
+        editor_root = page.locator(sel).first
+        editable = editor_root.locator("[contenteditable='true']").first
+        editor = editable if editable.count() and editable.is_visible() else editor_root
+        editor.click(timeout=3000)
+        for attempt in range(2):
+            editor.press("Control+A")
+            editor.press("Backspace")
+            page.wait_for_timeout(500)
+            remaining = len((editor.text_content() or "").strip())
+            log.info("第 %d 次清空旧正文后剩余 %d 字", attempt + 1, remaining)
+            if remaining == 0:
+                return True
+        return False
+    except Exception as e:  # noqa: BLE001
+        log.warning("清空旧正文失败：%s", e)
+        return False
 
 
 def _confirm_publish_modal(page: Page) -> bool:
@@ -615,14 +707,19 @@ def publish_article(
     body_md: str,
     *,
     dry_run: bool = False,
+    column_name: Optional[str] = None,
+    body_html_override: Optional[str] = None,
+    edit_url: Optional[str] = None,
 ) -> Optional[str]:
-    """发布一篇文章到目标专栏（默认配置里的 article.column_name）。
+    """新建文章，或通过 edit_url 更新一篇已发布文章。
 
     返回：成功 → 文章 URL（dry_run 时返回 draft 编辑 URL）；失败 → 抛 RuntimeError。
     """
     cfg = load_config()
     storage_state = Path(cfg["zhihu"]["storage_state"])
-    column_name = (cfg.get("article") or {}).get("column_name", "Agent工坊")
+    column_name = column_name or (cfg.get("article") or {}).get(
+        "column_name", "Agent工坊"
+    )
 
     if not storage_state.exists():
         raise RuntimeError(
@@ -650,8 +747,13 @@ def publish_article(
             pass
 
         page = context.new_page()
-        log.info("打开新建文章页：%s", WRITE_URL)
-        page.goto(WRITE_URL, wait_until="domcontentloaded", timeout=30000)
+        target_url = edit_url or WRITE_URL
+        if edit_url:
+            target_url = re.sub(r"[?#].*$", "", edit_url).rstrip("/")
+            if not target_url.endswith("/edit"):
+                target_url += "/edit"
+        log.info("打开文章编辑页：%s", target_url)
+        page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(2500)
 
         if not _ensure_logged_in(context, page):
@@ -663,8 +765,8 @@ def publish_article(
             _shot(page, "01_editor_not_ready")
             browser.close()
             raise RuntimeError("编辑器未就绪")
-        edit_url = page.url
-        log.info("草稿编辑 URL：%s", edit_url)
+        current_edit_url = page.url
+        log.info("文章编辑 URL：%s", current_edit_url)
         _shot(page, "01_editor_ready")
 
         # 1. 标题
@@ -674,12 +776,17 @@ def publish_article(
             raise RuntimeError("标题输入失败")
         _shot(page, "02_title_typed")
 
+        if edit_url and not _clear_editor_body(page):
+            _shot(page, "03_body_clear_failed")
+            browser.close()
+            raise RuntimeError("旧正文清空失败，已停止更新")
+
         # 2. 正文：首选「Markdown → HTML → text/html 粘贴」让 Draft.js 一次性
         #    建出 h2/ul/ol/blockquote/pre 等结构化 block；失败再回退到逐字符 type
         #    （type 路径对列表/代码块上下文不可靠，仅作兜底）。
         from .markdown_html import count_markdown_tables, markdown_to_html
 
-        body_html = markdown_to_html(body_md)
+        body_html = body_html_override or markdown_to_html(body_md)
         source_tables = count_markdown_tables(body_md)
         generated_tables = _count_html_tables(body_html)
         expected_tables = max(source_tables, generated_tables)
@@ -724,19 +831,47 @@ def publish_article(
         page.wait_for_timeout(2500)
         # 此时 URL 通常已经从 /write 跳到 /p/{id}/edit
         edit_url_after = page.url
-        if edit_url_after != edit_url:
-            log.info("URL 已跳转：%s → %s", edit_url, edit_url_after)
-            edit_url = edit_url_after
+        if edit_url_after != current_edit_url:
+            log.info("URL 已跳转：%s → %s", current_edit_url, edit_url_after)
+            current_edit_url = edit_url_after
 
         if dry_run:
             log.info("dry_run=True，不点发布。")
             _shot(page, "98_dry_run_final")
             _dump_editor_html(page, "98_dry_run_final")
             browser.close()
-            return edit_url
+            return current_edit_url
+
+        if edit_url:
+            if not _click_update_bottom(page):
+                _shot(page, "05_update_btn_not_found")
+                browser.close()
+                raise RuntimeError("找不到底部更新按钮")
+            _confirm_publish_modal(page)
+            page.wait_for_timeout(5000)
+            _shot(page, "06_after_update")
+            _dump_editor_html(page, "06_after_update")
+            m = re.search(r"/p/(\d+)", current_edit_url)
+            published_url = (
+                f"https://zhuanlan.zhihu.com/p/{m.group(1)}" if m else edit_url
+            )
+            if not _verify_published_tables(
+                page, published_url, expected_tables
+            ):
+                _shot(page, "07_published_table_verification_failed")
+                log.error("文章已更新，但发布页表格校验未通过：%s", published_url)
+            try:
+                context.storage_state(path=str(storage_state))
+            except Exception:
+                pass
+            browser.close()
+            return published_url
 
         # 3. 在「发布设置」面板勾选「发布到专栏」并选中目标专栏
-        _enable_column_and_select(page, column_name)
+        if not _enable_column_and_select(page, column_name):
+            _shot(page, "04_column_select_failed")
+            browser.close()
+            raise RuntimeError(f"未能选中知乎专栏：{column_name}")
         _shot(page, "04_column_selected")
 
         # 4. 点底部右下方的蓝色"发布"按钮
@@ -754,7 +889,7 @@ def publish_article(
         # 取已发布 URL：知乎一般会跳到 /p/{id}（去掉 /edit）
         published_url = page.url
         if "/edit" in published_url:
-            m = re.search(r"/p/(\d+)", edit_url)
+            m = re.search(r"/p/(\d+)", current_edit_url)
             if m:
                 published_url = f"https://zhuanlan.zhihu.com/p/{m.group(1)}"
         log.info("发布完成：%s", published_url)

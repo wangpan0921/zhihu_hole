@@ -203,7 +203,46 @@ def _wait_editor_ready(page: Page) -> bool:
     return False
 
 
+def _dismiss_education_dialog(page: Page) -> bool:
+    """关闭公众号编辑器偶发的 education-dialog 引导层。"""
+    dialog = page.locator(".education-dialog").last
+    try:
+        if not dialog.count() or not dialog.is_visible():
+            return True
+    except Exception:
+        return True
+
+    # 仅在该引导层内找关闭控件，避免误点保存、发表等业务按钮。
+    for selector in (
+        ".weui-desktop-dialog__close",
+        "[aria-label*=关闭]",
+        "button:has-text(我知道了)",
+        "button:has-text(知道了)",
+        "button:has-text(关闭)",
+        "[role=button]:has-text(我知道了)",
+        "[role=button]:has-text(知道了)",
+        "[role=button]:has-text(关闭)",
+    ):
+        try:
+            button = dialog.locator(selector).first
+            if button.count() and button.is_visible() and button.is_enabled():
+                button.click(timeout=2000)
+                break
+        except Exception:
+            continue
+
+    try:
+        dialog.wait_for(state="hidden", timeout=3000)
+        log.info("已关闭微信公众号编辑器引导弹窗")
+        return True
+    except Exception:
+        log.warning("微信公众号编辑器引导弹窗仍在页面上，无法继续输入")
+        return False
+
+
 def _fill_title(page: Page, title: str) -> bool:
+    if not _dismiss_education_dialog(page):
+        return False
     sel = _title_selector(page)
     if sel is None:
         log.warning("找不到标题输入框")

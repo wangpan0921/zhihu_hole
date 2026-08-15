@@ -25,6 +25,7 @@ _LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
 _UL_RE = re.compile(r"^\s*[-*+]\s+(.*)$")
 _OL_RE = re.compile(r"^\s*\d+\.\s+(.*)$")
+_IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\((https?://[^)]+)\)\s*$")
 _FENCE_RE = re.compile(r"^\s*```")
 _TABLE_DELIMITER_RE = re.compile(r":?-{3,}:?")
 
@@ -213,6 +214,19 @@ def markdown_to_html(md_text: str) -> str:
             out.append(table_html)
             continue
 
+        # 独立图片行
+        m = _IMAGE_RE.match(line.strip())
+        if m:
+            _close_lists()
+            alt = html.escape(m.group(1), quote=True)
+            src = html.escape(m.group(2), quote=True)
+            out.append(
+                f'<p><img src="{src}" alt="{alt}" '
+                'style="max-width:100%;height:auto;display:block;"/></p>'
+            )
+            i += 1
+            continue
+
         # 标题
         m = _HEADING_RE.match(line)
         if m:
@@ -269,6 +283,7 @@ def markdown_to_html(md_text: str) -> str:
                 or _HEADING_RE.match(nxt)
                 or _UL_RE.match(nxt)
                 or _OL_RE.match(nxt)
+                or _IMAGE_RE.match(nxt.strip())
                 or nxt.lstrip().startswith(">")
                 or _try_table(lines, i) is not None
             ):
