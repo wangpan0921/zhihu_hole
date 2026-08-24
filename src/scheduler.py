@@ -30,6 +30,7 @@ log = get_logger("scheduler")
 
 # 书籍池读完后，发私信通知的"已通知"标记，避免每个 slot 重复发
 _POOL_DONE_FLAG = DATA_DIR / "books" / ".pool_done_notified"
+_GENERATION_ALERT_DIR = DATA_DIR / "alerts"
 
 
 def _notify_pool_finished() -> None:
@@ -62,6 +63,25 @@ def _notify_pool_finished() -> None:
         log.exception("发送'书籍池读完'私信失败（不影响发布）：%s", e)
 
 
+def _notify_generation_failed(slot: str, date: dt.date, error: Exception) -> None:
+    """Notify once per date/slot when full-text generation cannot complete."""
+    marker = _GENERATION_ALERT_DIR / f"{date.isoformat()}_{slot}_generation_failed"
+    if marker.exists():
+        return
+    message = (
+        f"知乎树洞想法生成失败：{date.isoformat()} {slot}。"
+        f"任务已停止，没有回退到摘要或主题内容。原因：{str(error)[:300]}"
+    )
+    try:
+        if send_private_message(message):
+            marker.parent.mkdir(parents=True, exist_ok=True)
+            marker.write_text(
+                dt.datetime.now().isoformat(timespec="seconds"), encoding="utf-8"
+            )
+    except Exception as notify_error:  # noqa: BLE001
+        log.exception("发送生成失败私信告警失败：%s", notify_error)
+
+
 def _draft_path(date: dt.date, slot: str, *, base: Path = PENDING_DIR) -> Path:
     return base / f"{date.isoformat()}_{slot}.json"
 
@@ -88,12 +108,16 @@ def generate_one(slot: str, date: Optional[dt.date] = None) -> Path:
         return out
 
     try:
-        post = generate_post(slot=slot, date=date)
-    except BookPoolFinished:
-        # 书籍池全部读完：发一次私信通知，然后回退到主题池继续产出内容。
-        log.info("书籍池已全部读完，触发私信通知并回退 themes 模式")
-        _notify_pool_finished()
-        post = generate_from_theme()
+        try:
+            post = generate_post(slot=slot, date=date)
+        except BookPoolFinished:
+            # 书籍池全部读完：发一次私信通知，然后回退到主题池继续产出内容。
+            log.info("书籍池已全部读完，触发私信通知并回退 themes 模式")
+            _notify_pool_finished()
+            post = generate_from_theme()
+    except Exception as e:
+        _notify_generation_failed(slot, date, e)
+        raise
     try:
         img = get_image(post["image_prompt"])
         post["image_path"] = str(img)

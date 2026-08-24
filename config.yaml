@@ -9,7 +9,7 @@ zhihu:
   # 形如 https://www.zhihu.com/people/<urlToken>。留空则跳过发私信。
   notify_people_url: "https://www.zhihu.com/people/one-31-9-97"
 
-# 微信读书：用于抓取指定书的章节正文做"读书感悟"型内容
+# 微信读书：登录网页版后读取完整章节正文
 weread:
   # 登录态保存路径（终端二维码扫一次后长期复用）
   storage_state: "data/auth/weread_state.json"
@@ -17,18 +17,25 @@ weread:
 # 文案生成
 content:
   # 内容模式：themes（主题池随机）/ book_reflection（按书章节顺序写读书感悟）
-  # book_reflection 失败时（如 index.json 缺失、章节摘要为空）会自动回退到 themes
+  # book_reflection 全文读取或分析失败时停止任务并私信告警，不使用摘要兜底
   mode: "book_reflection"
-  # provider: anthropic | openai (留空则按 .env 中已有的 key 自动选)
-  provider: "openai"
+  # provider: codex_cli | anthropic | openai (留空则按 .env 中已有的 key 自动选)
+  provider: "codex_cli"
   # anthropic 模型
   anthropic_model: "claude-sonnet-4-5-20250929"
   # openai 模型
-  openai_model: "gpt-5.2"
+  openai_model: "gpt-5.6-sol"
+  # Codex CLI 配置（cron 使用绝对路径，避免 PATH 不完整）
+  codex_cli_command: "/home/wangpan/.npm-global/bin/codex"
+  codex_cli_node_command: "/home/wangpan/.local/bin/node"
+  codex_cli_model: "gpt-5.6-sol"
+  codex_cli_timeout_seconds: 180
   # 字数范围（知乎想法上限 ~1000 字）
   # themes 模式建议 180-380；book_reflection 100-500，宁可短也不凑字数
   min_chars: 100
   max_chars: 500
+  # 长章节按自然段切块分析；所有分块都会参与最终章节级提炼
+  chapter_chunk_chars: 6000
 
   # book_reflection 模式专用配置
   book:

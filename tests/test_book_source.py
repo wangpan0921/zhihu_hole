@@ -90,11 +90,38 @@ def fake_env(tmp_path, monkeypatch):
     monkeypatch.setattr(cg, "DATA_DIR", data_dir)
 
     def _fake_fetch(url, **kw):
-        return {"description": "x" * 600, "chapter_title": "t"}
+        paragraphs = ["完整章节正文。" * 100]
+        return {
+            "paragraphs": paragraphs,
+            "full_text": "\n\n".join(paragraphs),
+            "full_text_chars": 700,
+            "completeness_ratio": 0.95,
+            "chapter_title": "t",
+        }
 
-    monkeypatch.setattr(cg, "fetch_chapter", _fake_fetch)
+    monkeypatch.setattr(cg, "fetch_chapter_fulltext", _fake_fetch)
 
     def _fake_llm(system, user):
+        if system == cg.SYSTEM_PROMPT_CHAPTER_ANALYSIS:
+            return (
+                json.dumps(
+                    {
+                        "core_thesis": "核心观点",
+                        "argument_chain": ["前提", "原因", "结论"],
+                        "candidate_insights": [
+                            {
+                                "insight": "现实观点",
+                                "evidence": ["章节依据"],
+                                "real_life_scenes": ["日常场景"],
+                                "practical_test": "做一个判断",
+                                "boundary": "持续伤害时不适用",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                "fake",
+            )
         return (
             json.dumps(
                 {"title": "标题", "body": "正文内容。", "image_prompt": "calm light"}

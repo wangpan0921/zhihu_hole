@@ -215,13 +215,14 @@ def _dismiss_education_dialog(page: Page) -> bool:
     # 仅在该引导层内找关闭控件，避免误点保存、发表等业务按钮。
     for selector in (
         ".weui-desktop-dialog__close",
-        "[aria-label*=关闭]",
-        "button:has-text(我知道了)",
-        "button:has-text(知道了)",
-        "button:has-text(关闭)",
-        "[role=button]:has-text(我知道了)",
-        "[role=button]:has-text(知道了)",
-        "[role=button]:has-text(关闭)",
+        ".weui-desktop-dialog__close-btn",
+        "[aria-label*=\"关闭\"]",
+        "button:has-text(\"我知道了\")",
+        "button:has-text(\"知道了\")",
+        "button:has-text(\"关闭\")",
+        "[role=button]:has-text(\"我知道了\")",
+        "[role=button]:has-text(\"知道了\")",
+        "[role=button]:has-text(\"关闭\")",
     ):
         try:
             button = dialog.locator(selector).first

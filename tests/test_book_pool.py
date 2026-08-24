@@ -5,7 +5,7 @@
 2. 第一本读完后自动切到第二本；
 3. 池子全部读完时抛 BookPoolFinished，且调度层据此发私信 + 回退 themes。
 
-不依赖真实 LLM / 网络：用 monkeypatch 打桩 _call_llm 和 fetch_chapter。
+不依赖真实 LLM / 网络：用 monkeypatch 打桩 _call_llm 和完整章节抓取。
 """
 from __future__ import annotations
 
@@ -60,11 +60,38 @@ def fake_env(tmp_path, monkeypatch):
     monkeypatch.setattr(cg, "DATA_DIR", data_dir)
 
     def _fake_fetch(url, **kw):
-        return {"description": "x" * 600, "chapter_title": "t"}
+        paragraphs = ["完整章节正文。" * 100]
+        return {
+            "paragraphs": paragraphs,
+            "full_text": "\n\n".join(paragraphs),
+            "full_text_chars": 700,
+            "completeness_ratio": 0.95,
+            "chapter_title": "t",
+        }
 
-    monkeypatch.setattr(cg, "fetch_chapter", _fake_fetch)
+    monkeypatch.setattr(cg, "fetch_chapter_fulltext", _fake_fetch)
 
     def _fake_llm(system, user):
+        if system == cg.SYSTEM_PROMPT_CHAPTER_ANALYSIS:
+            return (
+                json.dumps(
+                    {
+                        "core_thesis": "核心观点",
+                        "argument_chain": ["前提", "原因", "结论"],
+                        "candidate_insights": [
+                            {
+                                "insight": "现实观点",
+                                "evidence": ["章节依据"],
+                                "real_life_scenes": ["日常场景"],
+                                "practical_test": "做一个判断",
+                                "boundary": "持续伤害时不适用",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                "fake",
+            )
         return (
             json.dumps(
                 {"title": "标题", "body": "正文内容。", "image_prompt": "calm light"}
@@ -155,3 +182,28 @@ def test_missing_index_skipped_in_pool(fake_env, monkeypatch):
 
     post = cg._generate_from_book("morning", dt.date(2026, 1, 1))
     assert post["book"]["book_title"] == "书B"
+
+
+def test_book_failure_does_not_fall_back_to_theme(monkeypatch):
+    monkeypatch.setattr(cg, "load_env", lambda: None)
+    monkeypatch.setattr(
+        cg,
+        "load_config",
+        lambda: {"content": {"mode": "book_reflection"}},
+    )
+    monkeypatch.setattr(
+        cg,
+        "_generate_from_book",
+        lambda slot, date: (_ for _ in ()).throw(RuntimeError("全文读取失败")),
+    )
+    theme_called = False
+
+    def _theme(theme=None):
+        nonlocal theme_called
+        theme_called = True
+        return {}
+
+    monkeypatch.setattr(cg, "_generate_from_theme", _theme)
+    with pytest.raises(RuntimeError, match="全文读取失败"):
+        cg.generate_post(slot="evening", date=dt.date(2026, 1, 1))
+    assert theme_called is False

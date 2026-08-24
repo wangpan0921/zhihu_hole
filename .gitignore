@@ -26,6 +26,7 @@ data/images/
 data/books/
 data/wechat_album/
 logs/
+kid_coding/**/images/
 
 # 调试截图
 debug/

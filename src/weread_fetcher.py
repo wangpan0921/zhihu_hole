@@ -1,24 +1,22 @@
-"""微信读书章节抓取器：纯 HTTP GET + 正则提取。
+"""微信读书章节抓取器。
 
-核心发现：
-- 微信读书把当前章节的 AI 摘要塞在 `<meta name="description">` 里（约 600~1000 字，
-  结构化要点）；
-- 整本书的章节列表（含 chapterUid/title/wordCount 等元数据）在
-  `window.__INITIAL_STATE__.reader.chapterInfos` 里；
-- description 走的是 SSR，**不需要登录**。
-
-所以日常生成读书感悟根本不需要 Playwright，1 次 HTTP GET 就能拿到全部素材。
+目录和章节元数据来自公开 SSR 页面。正文需要已登录的网页版阅读器；阅读器把
+文字绘制到 Canvas，因此通过 Playwright 在绘制阶段捕获文字，再按行距还原段落。
 """
 from __future__ import annotations
 
 import html as html_lib
 import json
 import re
+import statistics
+import time
+from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 import httpx
 
-from .utils import get_logger
+from .utils import AUTH_DIR, get_logger
 
 log = get_logger("weread_fetcher")
 
@@ -39,6 +37,276 @@ _RE_TITLE = re.compile(r"<title>([^<]+)</title>", re.IGNORECASE)
 
 class WereadFetchError(Exception):
     """抓章节失败。"""
+
+
+DEFAULT_STORAGE_STATE = AUTH_DIR / "weread_state.json"
+MIN_FULLTEXT_RATIO = 0.90
+MAX_FULLTEXT_RATIO = 1.25
+
+_CANVAS_CAPTURE_SCRIPT = r"""
+(() => {
+  window.__wereadCanvasText = [];
+  let nextCanvasId = 1;
+  const original = CanvasRenderingContext2D.prototype.fillText;
+  CanvasRenderingContext2D.prototype.fillText = function(text, x, y, maxWidth) {
+    const canvas = this.canvas;
+    if (!canvas.__wereadCaptureId) canvas.__wereadCaptureId = nextCanvasId++;
+    window.__wereadCanvasText.push({
+      text: String(text),
+      x: Number(x),
+      y: Number(y),
+      canvasId: canvas.__wereadCaptureId
+    });
+    if (arguments.length >= 4) return original.call(this, text, x, y, maxWidth);
+    return original.call(this, text, x, y);
+  };
+})();
+"""
+
+
+def _validate_storage_state(storage_state: Path) -> None:
+    if not storage_state.exists():
+        raise WereadFetchError(
+            f"微信读书登录态不存在：{storage_state}，请先运行扫码登录脚本"
+        )
+    try:
+        state = json.loads(storage_state.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise WereadFetchError(f"微信读书登录态无法读取：{storage_state}") from e
+
+    cookie_names = {
+        str(cookie.get("name"))
+        for cookie in state.get("cookies", [])
+        if isinstance(cookie, dict)
+    }
+    missing = {"wr_skey", "wr_vid"} - cookie_names
+    if missing:
+        raise WereadFetchError(
+            "微信读书登录态不完整，缺少 "
+            + "、".join(sorted(missing))
+            + "，请重新扫码登录"
+        )
+
+
+def _han_count(value: str) -> int:
+    return sum("\u4e00" <= char <= "\u9fff" for char in value)
+
+
+def _normalize_text(value: str) -> str:
+    value = value.replace("\u200b", "").replace("\ufeff", "")
+    return re.sub(r"[ \t]+", " ", value).strip()
+
+
+def _paragraphs_from_canvas_records(
+    records: list[dict[str, Any]],
+    *,
+    chapter_title: str = "",
+) -> list[str]:
+    """Select the text-bearing canvas and reconstruct paragraphs from line gaps."""
+    groups: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for record in records:
+        text = record.get("text")
+        y = record.get("y")
+        canvas_id = record.get("canvasId")
+        if not isinstance(text, str) or not text:
+            continue
+        if not isinstance(y, (int, float)) or not isinstance(canvas_id, int):
+            continue
+        # Chromium/WeRead may draw a long ASCII probe while measuring fonts.
+        if len(text) > 40 and _han_count(text) == 0:
+            continue
+        groups[canvas_id].append(record)
+
+    if not groups:
+        raise WereadFetchError("阅读器没有绘制章节文字，登录态可能已失效")
+
+    group_stats = {
+        canvas_id: {
+            "han": sum(_han_count(str(item["text"])) for item in group),
+            "min_y": min(float(item["y"]) for item in group),
+            "max_y": max(float(item["y"]) for item in group),
+        }
+        for canvas_id, group in groups.items()
+    }
+    primary_id = max(group_stats, key=lambda canvas_id: group_stats[canvas_id]["han"])
+    if group_stats[primary_id]["han"] < 100:
+        raise WereadFetchError("Canvas 中没有足够的中文正文，登录态可能已失效")
+
+    # Long chapters can be split across adjacent canvases. Start with the main
+    # text canvas, then include Chinese canvases whose vertical ranges continue it.
+    selected_ids = {primary_id}
+    min_y = group_stats[primary_id]["min_y"]
+    max_y = group_stats[primary_id]["max_y"]
+    changed = True
+    while changed:
+        changed = False
+        for canvas_id, stats in group_stats.items():
+            if canvas_id in selected_ids or stats["han"] < 20:
+                continue
+            overlaps = stats["min_y"] <= max_y and stats["max_y"] >= min_y
+            continues = (
+                0 <= stats["min_y"] - max_y <= 120
+                or 0 <= min_y - stats["max_y"] <= 120
+            )
+            if overlaps or continues:
+                selected_ids.add(canvas_id)
+                min_y = min(min_y, stats["min_y"])
+                max_y = max(max_y, stats["max_y"])
+                changed = True
+
+    content_records = [
+        record
+        for canvas_id in selected_ids
+        for record in groups[canvas_id]
+    ]
+    content_records.sort(key=lambda item: (float(item["y"]), float(item.get("x", 0))))
+
+    lines: list[tuple[float, str]] = []
+    current_y: float | None = None
+    parts: list[str] = []
+    for record in content_records:
+        y = float(record["y"])
+        if current_y is None or abs(y - current_y) < 0.5:
+            current_y = y if current_y is None else current_y
+            parts.append(str(record["text"]))
+            continue
+        line = _normalize_text("".join(parts))
+        if line:
+            lines.append((current_y, line))
+        current_y = y
+        parts = [str(record["text"])]
+    if parts and current_y is not None:
+        line = _normalize_text("".join(parts))
+        if line:
+            lines.append((current_y, line))
+
+    if len(lines) < 2:
+        raise WereadFetchError("Canvas 正文行数异常，无法还原完整章节")
+
+    positive_gaps = [
+        lines[i][0] - lines[i - 1][0]
+        for i in range(1, len(lines))
+        if 0 < lines[i][0] - lines[i - 1][0] < 55
+    ]
+    line_height = statistics.median(positive_gaps) if positive_gaps else 40.0
+    paragraph_gap = line_height * 1.35
+
+    paragraphs: list[str] = []
+    current = lines[0][1]
+    for i in range(1, len(lines)):
+        gap = lines[i][0] - lines[i - 1][0]
+        if gap >= paragraph_gap:
+            paragraphs.append(_normalize_text(current))
+            current = lines[i][1]
+        else:
+            current += lines[i][1]
+    paragraphs.append(_normalize_text(current))
+    paragraphs = [paragraph for paragraph in paragraphs if paragraph]
+
+    normalized_title = re.sub(r"\s+", "", chapter_title)
+    if paragraphs and re.sub(r"\s+", "", paragraphs[0]) == normalized_title:
+        paragraphs.pop(0)
+    return paragraphs
+
+
+def fetch_chapter_fulltext(
+    url: str,
+    *,
+    storage_state: str | Path = DEFAULT_STORAGE_STATE,
+    timeout: float = 60.0,
+    min_ratio: float = MIN_FULLTEXT_RATIO,
+) -> dict[str, Any]:
+    """Fetch metadata plus the complete chapter text from the logged-in reader.
+
+    The call fails closed: missing auth, too little captured text, or an incomplete
+    chapter raises WereadFetchError. It never falls back to the SSR AI summary.
+    """
+    metadata = fetch_chapter(url, timeout=min(timeout, 30.0))
+    storage_path = Path(storage_state)
+    _validate_storage_state(storage_path)
+    expected_chars = int(metadata.get("word_count") or 0)
+
+    try:
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+        from playwright.sync_api import sync_playwright
+    except ImportError as e:
+        raise WereadFetchError("缺少 Playwright，无法读取微信读书全文") from e
+
+    records: list[dict[str, Any]] = []
+    try:
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            try:
+                context = browser.new_context(
+                    storage_state=str(storage_path),
+                    viewport={"width": 1280, "height": 900},
+                    locale="zh-CN",
+                    user_agent=DEFAULT_HEADERS["User-Agent"],
+                )
+                page = context.new_page()
+                page.add_init_script(_CANVAS_CAPTURE_SCRIPT)
+                page.goto(
+                    url,
+                    wait_until="domcontentloaded",
+                    timeout=int(timeout * 1000),
+                )
+                minimum_han = max(100, int(expected_chars * 0.6))
+                page.wait_for_function(
+                    """minimum => {
+                      const rows = window.__wereadCanvasText || [];
+                      let count = 0;
+                      for (const row of rows) {
+                        count += (row.text.match(/[\u4e00-\u9fff]/g) || []).length;
+                      }
+                      return count >= minimum;
+                    }""",
+                    arg=minimum_han,
+                    timeout=int(timeout * 1000),
+                )
+                page.wait_for_timeout(500)
+                records = page.evaluate("() => window.__wereadCanvasText || []")
+            finally:
+                browser.close()
+    except PlaywrightTimeoutError as e:
+        raise WereadFetchError(
+            "等待微信读书正文超时，登录态可能已失效或页面结构已变化"
+        ) from e
+    except WereadFetchError:
+        raise
+    except Exception as e:
+        raise WereadFetchError(f"读取微信读书全文失败：{e}") from e
+
+    paragraphs = _paragraphs_from_canvas_records(
+        records,
+        chapter_title=str(metadata.get("chapter_title") or ""),
+    )
+    full_text = "\n\n".join(paragraphs)
+    compact_length = len(re.sub(r"\s+", "", full_text))
+    ratio = compact_length / expected_chars if expected_chars > 0 else 1.0
+    if expected_chars > 0 and ratio < min_ratio:
+        raise WereadFetchError(
+            f"章节正文疑似不完整：抓到 {compact_length} 字，"
+            f"元数据标注 {expected_chars} 字（{ratio:.1%}）"
+        )
+    if expected_chars > 0 and ratio > MAX_FULLTEXT_RATIO:
+        raise WereadFetchError(
+            f"章节正文疑似重复：抓到 {compact_length} 字，"
+            f"元数据标注 {expected_chars} 字（{ratio:.1%}）"
+        )
+    if compact_length < 100:
+        raise WereadFetchError(f"章节正文过短：{compact_length} 字")
+
+    result = dict(metadata)
+    result.update(
+        {
+            "paragraphs": paragraphs,
+            "full_text": full_text,
+            "full_text_chars": compact_length,
+            "completeness_ratio": ratio,
+            "fetched_at": int(time.time()),
+        }
+    )
+    return result
 
 
 def _parse_initial_state(html: str) -> dict[str, Any]:

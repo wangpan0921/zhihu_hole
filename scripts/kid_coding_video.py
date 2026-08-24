@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 import math
 import re
 import shutil
@@ -51,10 +52,11 @@ ACCENTS = [(46, 160, 67), (120, 84, 48), (37, 99, 235), (217, 140, 20), (214, 61
 
 CONTENT_X = 96
 CONTENT_TOP = 300
-CONTENT_BOTTOM = 858
+CONTENT_BOTTOM = 840
 CONTENT_W = WIDTH - CONTENT_X - 96
 
 
+@lru_cache(maxsize=None)
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     candidates = [
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc" if bold else "",
@@ -215,9 +217,16 @@ def rounded(draw, box, fill, outline=BORDER, width=2, radius=12):
 _DUMMY = ImageDraw.Draw(Image.new("RGB", (10, 10)))
 
 
+def code_visual_lines(value: str, code_font: ImageFont.FreeTypeFont = F_CODE) -> list[str]:
+    lines: list[str] = []
+    for raw in value.splitlines() or [""]:
+        lines.extend(wrap(_DUMMY, raw or " ", code_font, CONTENT_W - 44))
+    return lines
+
+
 def block_height(block: Block) -> int:
     if block.kind == "code":
-        n = len(block.text.splitlines()) or 1
+        n = len(code_visual_lines(block.text)) or 1
         return 28 + n * (F_CODE.size + 12) + 24
     if block.kind == "quote":
         lines = wrap(_DUMMY, strip_md(block.text), F_QUOTE, CONTENT_W - 60)
@@ -229,12 +238,38 @@ def block_height(block: Block) -> int:
     return len(lines) * (F_BODY.size + 12) + 18
 
 
+def split_oversized_block(block: Block, avail: int) -> list[Block]:
+    if block_height(block) <= avail:
+        return [block]
+    if block.kind == "code":
+        visual_lines = code_visual_lines(block.text)
+        max_lines = max(1, (avail - 52) // (F_CODE.size + 12))
+        return [
+            Block("code", "\n".join(visual_lines[i:i + max_lines]))
+            for i in range(0, len(visual_lines), max_lines)
+        ]
+
+    parts: list[Block] = []
+    current = ""
+    for ch in block.text:
+        candidate = Block(block.kind, current + ch)
+        if current and block_height(candidate) > avail:
+            parts.append(Block(block.kind, current.rstrip()))
+            current = ch.lstrip()
+        else:
+            current += ch
+    if current:
+        parts.append(Block(block.kind, current.rstrip()))
+    return parts
+
+
 def paginate(blocks: list[Block]) -> list[list[Block]]:
     pages: list[list[Block]] = []
     cur: list[Block] = []
     h = 0
     avail = CONTENT_BOTTOM - CONTENT_TOP
-    for b in blocks:
+    fitted = [part for block in blocks for part in split_oversized_block(block, avail)]
+    for b in fitted:
         bh = block_height(b)
         if cur and h + bh > avail:
             pages.append(cur)
@@ -243,6 +278,34 @@ def paginate(blocks: list[Block]) -> list[list[Block]]:
         else:
             cur.append(b)
             h += bh
+    if cur:
+        pages.append(cur)
+    return pages or [[]]
+
+
+def paginate_locked_narration(blocks: list[Block]) -> list[list[Block]]:
+    """Reproduce the semantic pages used by an existing hand-edited narration.
+
+    Older narration files were prepared before oversized blocks were split for
+    rendering. Keep those blocks on their original semantic screen; the
+    renderer handles fitting them or replaces them with a lesson visual.
+    """
+    pages: list[list[Block]] = []
+    cur: list[Block] = []
+    height = 0
+    avail = CONTENT_BOTTOM - CONTENT_TOP
+    for block in blocks:
+        if block.kind == "code":
+            block_h = 28 + max(1, len(block.text.splitlines())) * (F_CODE.size + 12) + 24
+        else:
+            block_h = block_height(block)
+        if cur and height + block_h > avail:
+            pages.append(cur)
+            cur = [block]
+            height = block_h
+        else:
+            cur.append(block)
+            height += block_h
     if cur:
         pages.append(cur)
     return pages or [[]]
@@ -264,6 +327,7 @@ class Slide:
     explain: str = ""              # 揭晓解释
     pause: float = 0.0             # 题目屏思考停顿秒数（含倒计时）
     is_reveal: bool = False        # 本页是否是「揭晓答案」quote 起始的页（用于互动题定位插入点）
+    media: Path | None = None      # 可选课程配图；用于长代码/流程等更适合图示的画面
 
 
 @dataclass
@@ -283,7 +347,7 @@ class Caption:
     text: str
 
 
-def build_slides(title: str, sections: list[Section]) -> list[Slide]:
+def build_slides(title: str, sections: list[Section], locked: bool = False) -> list[Slide]:
     """把每节内容分页成幻灯片。
 
     如果某一节内含「揭晓」类 quote 块（我们系列里「先预测/先猜猜看之后揭晓答案」的写法），
@@ -294,7 +358,7 @@ def build_slides(title: str, sections: list[Section]) -> list[Slide]:
     slides: list[Slide] = []
     for si, sec in enumerate(sections):
         accent = ACCENTS[si % len(ACCENTS)]
-        pages = paginate(sec.blocks)
+        pages = paginate_locked_narration(sec.blocks) if locked else paginate(sec.blocks)
         # 展开：若某页内部存在「揭晓」quote，从该 quote 前把这一页切成两页。
         split_pages: list[list[Block]] = []
         for page in pages:
@@ -403,10 +467,28 @@ def load_quiz(folder: Path) -> list[Quiz]:
 def make_silence(seconds: float, out: Path) -> Path:
     subprocess.run(
         [ffmpeg(), "-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi",
-         "-i", "anullsrc=r=24000:cl=mono", "-t", f"{seconds:.2f}", "-q:a", "9", str(out)],
+         "-i", "anullsrc=r=44100:cl=mono", "-t", f"{seconds:.2f}", "-q:a", "9", str(out)],
         check=True,
     )
     return out
+
+
+def break_narration(text: str, limit: int = 34) -> str:
+    """Keep generated caption lines within the course subtitle width."""
+    lines: list[str] = []
+    for raw in text.splitlines():
+        value = raw.strip()
+        while len(value) > limit:
+            cut = max(
+                (i + 1 for i, ch in enumerate(value[:limit])
+                 if ch.isspace() or ch in "，。；：！？、,;:!?"),
+                default=limit,
+            )
+            lines.append(value[:cut].strip())
+            value = value[cut:].strip()
+        if value:
+            lines.append(value)
+    return "\n".join(lines)
 
 
 def insert_quiz_slides(slides: list[Slide], quizzes: list[Quiz]) -> list[Slide]:
@@ -438,21 +520,37 @@ def insert_quiz_slides(slides: list[Slide], quizzes: list[Quiz]) -> list[Slide]:
                    and base(slides[idx + 1].title) == base(slides[start].title)
                    and not slides[idx + 1].is_reveal):
                 idx += 1  # 跨过该节的「（续）」分页，但绝不跨过揭晓页
-        long_opts = any(("\n" in o or len(o) > 22) for o in q.options)
-        if long_opts:
-            opt_read = "看屏幕上的选项"
-        else:
-            opt_read = "；".join(o.replace(".", "，", 1) for o in q.options)
+
+            # 互动题的答案屏已经承担揭晓，不再保留文章中重复的纯揭晓页。
+            reveal_idx = idx + 1
+            if (reveal_idx < len(slides)
+                    and slides[reveal_idx].kind == "content"
+                    and base(slides[reveal_idx].title) == base(slides[start].title)
+                    and slides[reveal_idx].is_reveal):
+                reveal = slides[reveal_idx]
+                remaining = [
+                    block for block in reveal.blocks
+                    if not (block.kind == "quote"
+                            and strip_md(block.text).lstrip().startswith("揭晓"))
+                ]
+                if remaining:
+                    reveal.blocks = remaining
+                    reveal.is_reveal = False
+                    reveal.narration = " ".join(
+                        value for value in (speakable(block) for block in remaining) if value
+                    ) or reveal.title
+                else:
+                    slides.pop(reveal_idx)
         q_slide = Slide(
             title="先猜猜看", blocks=[], accent=(217, 140, 20),
-            narration=f"{q.question} 选项：{opt_read}。你选哪个？想一想。",
+            narration=break_narration(f"{q.question}\n请看屏幕选项，想一想。"),
             kind="quiz_q", options=q.options, answer=q.answer,
             question=q.question, explain=q.explain, pause=q.pause,
         )
         ans_read = q.explain or f"正确答案是 {q.answer}。"
         a_slide = Slide(
             title="揭晓答案", blocks=[], accent=(46, 160, 67),
-            narration=f"答案是 {q.answer}。{ans_read}",
+            narration=break_narration(f"答案是 {q.answer}。\n{ans_read}"),
             kind="quiz_a", options=q.options, answer=q.answer,
             question=q.question, explain=q.explain,
         )
@@ -583,6 +681,44 @@ def _static_bg() -> Image.Image:
     return _BG_CACHE.copy()
 
 
+
+_MEDIA_CACHE: dict[Path, Image.Image] = {}
+
+
+def attach_lesson_media(folder: Path, slides: list[Slide]) -> None:
+    """Attach prepared lesson visuals to screens where raw text would be weaker."""
+    if not folder.name.startswith("lesson-09-"):
+        return
+    image_dir = folder / "images"
+    mapping = {
+        0: "cover.png",
+        4: "fig03_eight_lessons.png",
+        5: "fig02_break_problem.png",
+        9: "fig04_one_turn_pipeline.png",
+        10: "fig04_one_turn_pipeline.png",
+        13: "fig05_while_three_conditions.png",
+        14: "fig05_while_three_conditions.png",
+        17: "fig06_run_battle_log.png",
+        19: "fig06_run_battle_log.png",
+    }
+    for index, name in mapping.items():
+        path = image_dir / name
+        if index < len(slides) and path.exists():
+            slides[index].media = path
+
+
+def render_media(img: Image.Image, draw: ImageDraw.ImageDraw, path: Path) -> None:
+    visual = _MEDIA_CACHE.get(path)
+    if visual is None:
+        visual = Image.open(path).convert("RGB")
+        visual.thumbnail((CONTENT_W, CONTENT_BOTTOM - CONTENT_TOP), Image.Resampling.LANCZOS)
+        _MEDIA_CACHE[path] = visual
+    x = CONTENT_X + (CONTENT_W - visual.width) // 2
+    y = CONTENT_TOP + (CONTENT_BOTTOM - CONTENT_TOP - visual.height) // 2
+    rounded(draw, (x - 6, y - 6, x + visual.width + 6, y + visual.height + 6),
+            PANEL, outline=BORDER, width=2, radius=8)
+    img.paste(visual, (x, y))
+
 def canvas(lesson_no: int, corner: str, slide: Slide, local: float) -> tuple[Image.Image, ImageDraw.ImageDraw]:
     img = _static_bg()
     draw = ImageDraw.Draw(img)
@@ -655,13 +791,13 @@ def render_quiz(draw, sl: Slide, reveal: bool, countdown: int | None) -> None:
             ty += F_BODY.size + 8
 
 
-def render_blocks(draw, blocks: list[Block], accent) -> None:
+def _render_blocks_fixed(draw, blocks: list[Block], accent) -> None:
     y = CONTENT_TOP
     for b in blocks:
         if y > CONTENT_BOTTOM:
             break
         if b.kind == "code":
-            code_lines = b.text.splitlines() or [""]
+            code_lines = code_visual_lines(b.text)
             h = len(code_lines) * (F_CODE.size + 12) + 24
             rounded(draw, (CONTENT_X, y, CONTENT_X + CONTENT_W, y + h), CODE_BG, outline=BORDER, width=2, radius=10)
             cy = y + 12
@@ -699,19 +835,103 @@ def render_blocks(draw, blocks: list[Block], accent) -> None:
             y += 8
 
 
+
+
+def _adaptive_layout(blocks: list[Block], body_size: int):
+    body_ft = font(body_size)
+    quote_ft = font(body_size)
+    code_ft = font(max(14, body_size - 4), True)
+    body_gap = max(5, body_size // 3)
+    code_gap = max(4, code_ft.size // 3)
+    measured = []
+    total = 0
+    for block in blocks:
+        text = strip_md(block.text)
+        if block.kind == "code":
+            lines = code_visual_lines(block.text, code_ft)
+            height = len(lines) * (code_ft.size + code_gap) + 24
+        elif block.kind == "quote":
+            lines = wrap(_DUMMY, text, quote_ft, CONTENT_W - 60)
+            height = len(lines) * (quote_ft.size + body_gap) + 24
+        elif block.kind == "item":
+            lines = wrap(_DUMMY, text, body_ft, CONTENT_W - 60)
+            height = len(lines) * (body_ft.size + body_gap) + 8
+        else:
+            lines = wrap(_DUMMY, text, body_ft, CONTENT_W)
+            height = len(lines) * (body_ft.size + body_gap) + 8
+        measured.append((block, lines, height))
+        total += height + 8
+    return body_ft, quote_ft, code_ft, body_gap, code_gap, measured, total
+
+
+_BLOCK_LAYOUT_CACHE: dict[tuple[tuple[str, str], ...], tuple] = {}
+
+
+def render_blocks(draw, blocks: list[Block], accent) -> None:
+    key = tuple((block.kind, block.text) for block in blocks)
+    layout = _BLOCK_LAYOUT_CACHE.get(key)
+    if layout is None:
+        available = CONTENT_BOTTOM - CONTENT_TOP
+        layout = _adaptive_layout(blocks, 16)
+        for size in range(F_BODY.size, 15, -2):
+            candidate = _adaptive_layout(blocks, size)
+            layout = candidate
+            if candidate[-1] <= available:
+                break
+        _BLOCK_LAYOUT_CACHE[key] = layout
+
+    body_ft, quote_ft, code_ft, body_gap, code_gap, measured, _ = layout
+    y = CONTENT_TOP
+    for block, lines, height in measured:
+        if block.kind == "code":
+            rounded(draw, (CONTENT_X, y, CONTENT_X + CONTENT_W, y + height),
+                    CODE_BG, outline=BORDER, width=2, radius=8)
+            line_y = y + 12
+            for line in lines:
+                draw.text((CONTENT_X + 22, line_y), line, font=code_ft, fill=INK)
+                line_y += code_ft.size + code_gap
+        elif block.kind == "quote":
+            draw.rectangle((CONTENT_X, y, CONTENT_X + 6, y + height), fill=accent)
+            line_y = y + 12
+            for line in lines:
+                draw.text((CONTENT_X + 28, line_y), line, font=quote_ft, fill=MUTED)
+                line_y += quote_ft.size + body_gap
+        elif block.kind == "item":
+            radius = max(5, body_ft.size // 5)
+            draw.ellipse((CONTENT_X + 8, y + body_ft.size // 3,
+                          CONTENT_X + 8 + radius * 2, y + body_ft.size // 3 + radius * 2),
+                         fill=accent)
+            line_y = y
+            for line in lines:
+                draw.text((CONTENT_X + 44, line_y), line, font=body_ft, fill=INK)
+                line_y += body_ft.size + body_gap
+        else:
+            line_y = y
+            for line in lines:
+                draw.text((CONTENT_X, line_y), line, font=body_ft, fill=INK)
+                line_y += body_ft.size + body_gap
+        y += height + 8
 def draw_caption(img, cap, t, total, accent):
     draw = ImageDraw.Draw(img)
     draw.rectangle((0, HEIGHT - 8, int(WIDTH * min(1.0, t / total)), HEIGHT), fill=accent)
     if cap is None:
         return
-    x1, y1, x2, y2 = 200, 900, WIDTH - 200, 1024
-    rounded(draw, (x1, y1, x2, y2), NAVY, outline=(60, 72, 60), radius=12)
-    lines = wrap(draw, cap.text, F_CAPTION, x2 - x1 - 80)[:2]
-    yy = y1 + 24 if len(lines) == 2 else y1 + 42
+    x1, y1, x2, y2 = 72, 866, WIDTH - 72, 1004
+    rounded(draw, (x1, y1, x2, y2), (252, 253, 249), outline=accent, width=3, radius=10)
+    caption_font = F_CAPTION
+    lines = wrap(draw, cap.text, caption_font, x2 - x1 - 96)
+    for size in range(F_CAPTION.size - 1, 17, -1):
+        if len(lines) <= 2:
+            break
+        caption_font = font(size, True)
+        lines = wrap(draw, cap.text, caption_font, x2 - x1 - 96)
+    line_gap = 10
+    text_h = len(lines) * caption_font.size + max(0, len(lines) - 1) * line_gap
+    yy = y1 + (y2 - y1 - text_h) // 2
     for line in lines:
-        w, _ = tsize(draw, line, F_CAPTION)
-        draw.text((x1 + (x2 - x1 - w) // 2, yy), line, font=F_CAPTION, fill=(255, 255, 255))
-        yy += 46
+        w, _ = tsize(draw, line, caption_font)
+        draw.text((x1 + (x2 - x1 - w) // 2, yy), line, font=caption_font, fill=INK)
+        yy += caption_font.size + line_gap
 
 
 # ---------- 主流程 ----------
@@ -759,7 +979,7 @@ def load_or_init_narration(folder: Path, slides: list[Slide]) -> str:
         ]
         for i, sl in enumerate(slides):
             header.append(f"### {i + 1} | {sl.title}")
-            header.append(sl.narration)
+            header.append(break_narration(sl.narration))
             header.append("")
         path.write_text("\n".join(header), encoding="utf-8")
 
@@ -783,14 +1003,16 @@ def load_or_init_narration(folder: Path, slides: list[Slide]) -> str:
     if cur is not None:
         texts.append("\n".join(cur).strip())
 
-    # 陈旧检测：分块标题必须与当前幻灯片标题逐一一致
-    if titles != [sl.title for sl in slides]:
-        path.replace(path.with_suffix(".txt.bak"))
-        write_fresh()
-        return "refreshed"
+    # 陈旧检测：不自动覆盖手工编辑过的朗读稿。
+    expected = [sl.title for sl in slides]
+    if titles != expected:
+        raise SystemExit(
+            f"narration.txt 与当前分页不一致：朗读稿 {len(titles)} 页，画面 {len(expected)} 页。"
+            "请先迁移朗读稿；为保护手工修改，文件未被覆盖。"
+        )
 
     for i, b in enumerate(texts):
-        if i < len(slides) and b:
+        if i < len(slides):
             slides[i].narration = b
     return "loaded"
 
@@ -808,40 +1030,54 @@ def main() -> int:
     title, sections = parse_article(article_path.read_text(encoding="utf-8"))
     if not sections:
         raise SystemExit("文章解析后没有可用内容")
+    narr_path = folder / "narration.txt"
     slides = build_slides(title, sections)
-
-    if args.check_narration:
-        narr_state = load_or_init_narration(folder, slides)
-        tip = {"created": "已生成", "refreshed": "检测到文章改动，已按新文章重建", "loaded": "已存在"}[narr_state]
-        print(f"朗读稿{tip}：{folder / 'narration.txt'}\n")
-        print("逐屏核对：左边「画面」是这一屏实际会显示的内容（来自文章），右边「朗读」是 narration.txt 里这一屏的文字。")
-        print("标题只保证结构对得上（页数、顺序），文字内容是否互相匹配靠人工核对下面的输出。\n")
-        for i, sl in enumerate(slides):
-            screen_text = " / ".join(b.text.replace("\n", " ") for b in sl.blocks) or "(无正文，仅标题)"
-            print(f"--- 第 {i + 1} 屏 | {sl.title} ---")
-            print(f"  画面：{screen_text[:200]}")
-            print(f"  朗读：{sl.narration[:200]}")
-            print()
-        return 0
+    if narr_path.exists():
+        narration_titles = []
+        for line in narr_path.read_text(encoding="utf-8").splitlines():
+            if line.startswith("### "):
+                heading = line[4:].strip()
+                narration_titles.append(heading.split("|", 1)[1].strip() if "|" in heading else heading)
+        if narration_titles != [slide.title for slide in slides]:
+            locked_slides = build_slides(title, sections, locked=True)
+            if narration_titles == [slide.title for slide in locked_slides]:
+                slides = locked_slides
+                print(f"（按现有 narration.txt 锁定为 {len(slides)} 个内容画面）", flush=True)
 
     narr_state = load_or_init_narration(folder, slides)
-    narr_path = folder / "narration.txt"
+    attach_lesson_media(folder, slides)
     if args.narration_only:
-        tip = {"created": "已生成", "refreshed": "检测到文章改动，已按新文章重建（旧稿存为 narration.txt.bak）", "loaded": "已存在"}[narr_state]
+        tip = {"created": "已生成", "loaded": "已存在"}[narr_state]
         print(f"朗读稿{tip}：{narr_path}")
         print("在其中改标点/加换行调整配音停顿与字幕断句，然后重新运行（不加 --narration-only）渲染。")
-        print("手动改完内容（不只是加换行）后，建议先跑一次 --check-narration 核对画面与朗读是否对得上，再渲染。")
+        print("手动改完内容后，先跑一次 --check-narration 核对最终画面顺序。")
         return 0
     if narr_state == "created":
         print(f"（已生成可编辑朗读稿：{narr_path}，本次先用默认稿渲染；想微调停顿就编辑它再重跑）")
-    elif narr_state == "refreshed":
-        print(f"（检测到文章改动、与朗读稿分页不一致，已按当前文章重建 {narr_path}；旧稿备份为 narration.txt.bak，如有手改的停顿请重新应用）", flush=True)
 
-    # 互动题（A方案）：读 quiz.txt，把出题屏+揭晓屏插到指定小节之后
+    # 互动题必须先插入，再按最终屏幕顺序检查或渲染。
     quizzes = load_quiz(folder)
     slides = insert_quiz_slides(slides, quizzes)
     if quizzes:
         print(f"（已插入 {len(quizzes)} 道互动题：弹选项 + 倒计时 + 揭晓）", flush=True)
+
+    if args.check_narration:
+        print(f"朗读稿已存在：{narr_path}\n")
+        print("逐屏核对：画面是最终视频实际显示的内容，朗读同时用于配音和字幕。\n")
+        for i, sl in enumerate(slides):
+            if sl.kind == "quiz_q":
+                screen_text = sl.question + " / " + " / ".join(sl.options or [])
+            elif sl.kind == "quiz_a":
+                screen_text = f"答案 {sl.answer} / {sl.explain}"
+            else:
+                screen_text = " / ".join(b.text.replace("\n", " ") for b in sl.blocks) or "(无正文，仅标题)"
+                if sl.media:
+                    screen_text = f"配图 {sl.media.name} / {screen_text}"
+            print(f"--- 第 {i + 1} 屏 | {sl.kind} | {sl.title} ---")
+            print(f"  画面：{screen_text[:240]}")
+            print(f"  朗读：{sl.narration[:240]}")
+            print()
+        return 0
 
     workdir = Path(tempfile.mkdtemp(prefix="kidvid_"))
     audio_parts: list[Path] = []
@@ -850,7 +1086,10 @@ def main() -> int:
     print(f"[1/3] 合成配音（共 {len(slides)} 段）…", flush=True)
     for i, sl in enumerate(slides):
         ap_i = workdir / f"a{i:03d}.mp3"
-        tts(apply_pron(sl.narration, pron), ap_i)
+        if sl.narration.strip():
+            tts(apply_pron(sl.narration, pron), ap_i)
+        else:
+            make_silence(4.0, ap_i)
         audio_parts.append(ap_i)
         spoken = duration(ap_i)
         total_d = spoken
@@ -868,7 +1107,8 @@ def main() -> int:
     for sl, (td, sd) in zip(slides, dur_pairs):
         sl.start = t
         sl.end = t + td
-        captions.extend(caption_lines(sl.narration, t, sd))
+        if sl.narration.strip():
+            captions.extend(caption_lines(sl.narration, t, sd))
         t += td
     total = t + 0.6
 
@@ -901,7 +1141,10 @@ def main() -> int:
             sl = active_slide(tt)
             img, draw = canvas(args.lesson, corner, sl, tt - sl.start)
             if sl.kind == "content":
-                render_blocks(draw, sl.blocks, sl.accent)
+                if sl.media:
+                    render_media(img, draw, sl.media)
+                else:
+                    render_blocks(draw, sl.blocks, sl.accent)
             else:
                 countdown = None
                 if sl.kind == "quiz_q" and sl.pause > 0:
