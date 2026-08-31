@@ -110,21 +110,39 @@ def _publish_zhihu(title: str, body: str, source: Path, published_dir: Path, *, 
     return url
 
 
+def _select_wechat_cover(candidates: list[Path]) -> Optional[Path]:
+    """Choose the image closest to the WeChat wide-cover aspect ratio."""
+    if not candidates:
+        return None
+    try:
+        from PIL import Image
+
+        def ratio_distance(path: Path) -> float:
+            with Image.open(path) as image:
+                width, height = image.size
+            return abs(width / max(height, 1) - 2.35)
+
+        return min(candidates, key=ratio_distance)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("无法读取封面尺寸，按文件名选择：%s", exc)
+        return candidates[0]
+
+
 def _publish_wechat(title: str, body: str, source: Path, published_dir: Path, *, dry_run: bool) -> Optional[str]:
     from .wechat_article_publisher import publish_wechat_article
 
     cfg = _config()
-    # 课程正文旁的截图是最可靠的系列封面候选；按文件名稳定选择。
+    # 课程正文旁的截图是最可靠的系列封面候选。
     cover_candidates = sorted(
         path for path in source.parent.iterdir()
         if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
     )
-    cover_path = cover_candidates[0] if cover_candidates else None
+    cover_path = _select_wechat_cover(cover_candidates)
     if not dry_run and cover_path is None:
         raise RuntimeError(f"微信公众号封面不存在，请将图片放入：{source.parent}")
     if cover_path is not None:
         log.info("微信公众号封面：%s", cover_path)
-    url = publish_wechat_article(title, body, cover_path=cover_path, dry_run=dry_run)
+    url = publish_wechat_article(title, body, cover_path=cover_path, source_dir=source.parent, dry_run=dry_run)
     if not dry_run:
         _write_meta(
             _meta_path(source, "wechat", published_dir),
@@ -134,8 +152,9 @@ def _publish_wechat(title: str, body: str, source: Path, published_dir: Path, *,
                 "published_at": dt.datetime.now().isoformat(timespec="seconds"),
                 "article_url": url,
                 "album": cfg["wechat_album_name"],
-                "album_status": "published_as_article;_album_membership_requires_backend_support_or_manual_check",
+                "album_status": "draft;_album_membership_applies_after_manual_publish",
                 "platform": "wechat_mp",
+                "status": "draft",
             },
         )
     return url

@@ -116,13 +116,13 @@ wechat_album_to_zhihu:
   skip_first: 1
   state_path: "data/wechat_album/state.json"
 
-# 微信公众号发布配置
+# 微信公众号草稿配置
 # 每天 08:00 cron 触发 scripts/publish_wechat_articles.py：
 #   - 扫 docs/pending/ 下的 .md，挑 mtime 最早的一篇
 #   - 使用公众号友好的 HTML 模板粘贴到图文编辑器
 #   - 从 assets/wechat_covers/ 读取同名封面，作为正文首图上传
 #   - 仅在接口 ret=0、成功提示或素材 ID 等真实证据存在时判定成功
-#   - 成功后写 {stem}.wechat.meta.json，作为公众号已发标记
+#   - 成功后写 {stem}.wechat.meta.json，作为公众号草稿已保存标记
 #   - 仅当知乎 {stem}.meta.json 也存在时，才把 md 移到 docs/published/
 #   - 目录为空或 pending 文件都已有公众号标记就什么都不做
 wechat_mp:
@@ -130,8 +130,8 @@ wechat_mp:
   storage_state: "data/auth/wechat_mp_state.json"
   # 新建图文链接；可保留 issue 中给出的链接，token 过期时脚本会从首页 URL 尝试补新 token
   edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=606650881&lang=zh_CN&timestamp=1782829732579"
-  # publish：尝试点击发表/发布/群发；draft：只保存为草稿
-  publish_action: "publish"
+  # 所有公众号文章只保存到草稿箱，不直接发表/群发
+  publish_action: "draft"
 
 # 发布调度
 schedule:

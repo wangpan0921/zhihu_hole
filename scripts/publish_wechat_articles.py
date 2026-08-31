@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""扫 docs/pending/，把其中最早的一篇 .md 发布到微信公众号。
+"""扫 docs/pending/，把其中最早的一篇 .md 保存到微信公众号草稿箱。
 
 用法：
     python scripts/publish_wechat_articles.py
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="只填入微信公众号编辑器，不点击保存/发表，也不归档",
+        help="只填入微信公众号编辑器，不点击保存草稿，也不归档",
     )
     args = parser.parse_args()
 

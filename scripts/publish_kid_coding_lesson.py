@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish a specific kid_coding lesson to Zhihu article and/or WeChat MP.
+"""Publish a kid_coding lesson to Zhihu and/or save it as a WeChat draft.
 
 Examples:
     python scripts/publish_kid_coding_lesson.py --lesson 4 --platform both --dry-run
@@ -103,6 +103,19 @@ def _platforms(value: str) -> list[str]:
     return [value]
 
 
+def _wechat_cover_path(article_file: Path) -> Path:
+    """Prefer the lesson explicit cover image for the WeChat draft."""
+    lesson_dir = article_file.parent
+    for directory in (lesson_dir / "images", lesson_dir):
+        for extension in (".png", ".jpg", ".jpeg", ".webp"):
+            candidate = directory / f"cover{extension}"
+            if candidate.is_file():
+                return candidate
+    raise FileNotFoundError(
+        f"未找到微信公众号封面，请准备：{lesson_dir / 'images' / 'cover.png'}"
+    )
+
+
 def _write_meta(
     lesson_dir: Path,
     lesson: int,
@@ -149,7 +162,14 @@ def publish_lesson(
     for target in _platforms(platform):
         log.info("开始发布到 %s%s", target, "（dry-run）" if dry_run else "")
         if target == "wechat":
-            url = publish_wechat_article(title, body, dry_run=dry_run)
+            cover_path = None if dry_run else _wechat_cover_path(article_file)
+            url = publish_wechat_article(
+                title,
+                body,
+                cover_path=cover_path,
+                source_dir=article_file.parent,
+                dry_run=dry_run,
+            )
         elif target == "zhihu":
             url = publish_article(
                 title,
@@ -171,6 +191,13 @@ def publish_lesson(
                 title=title,
                 url=url,
             )
+            if target == "wechat":
+                meta_data = json.loads(meta.read_text(encoding="utf-8"))
+                meta_data["status"] = "draft"
+                meta.write_text(
+                    json.dumps(meta_data, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
             log.info("已写发布记录：%s", meta)
 
     return results

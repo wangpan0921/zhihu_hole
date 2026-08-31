@@ -1,4 +1,4 @@
-"""docs/pending → 微信公众号文章发布流水线。"""
+"""docs/pending → 微信公众号文章草稿流水线。"""
 from __future__ import annotations
 
 import datetime as dt
@@ -49,13 +49,13 @@ def _cover_path_for(article: Path) -> Optional[Path]:
 
 
 def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
-    """从 docs/pending 选一篇发布到微信公众号。
+    """从 docs/pending 选一篇保存到微信公众号草稿箱。
 
     返回 None 表示没有待发布文章；dry_run 不归档。
     """
     target = _pick_oldest_pending()
     if target is None:
-        log.info("docs/pending 没有未发公众号的 .md，跳过本次微信公众号发布")
+        log.info("docs/pending 没有未保存公众号草稿的 .md，跳过本次处理")
         return None
 
     all_count = len(pending_files_unpublished_for("wechat"))
@@ -76,6 +76,7 @@ def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
         title,
         body,
         cover_path=cover_path,
+        source_dir=target.parent,
         dry_run=dry_run,
     )
 
@@ -89,6 +90,7 @@ def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
         "published_at": dt.datetime.now().isoformat(timespec="seconds"),
         "article_url": article_url,
         "platform": "wechat_mp",
+        "status": "draft",
     }
     write_platform_meta(target, "wechat", meta)
     archive_if_complete(target)

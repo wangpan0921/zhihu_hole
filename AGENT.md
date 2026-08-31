@@ -38,7 +38,7 @@
 # 发布知乎专栏文章
 ./venv/bin/python scripts/publish_articles.py
 
-# 发布微信公众号文章
+# 保存微信公众号文章草稿
 ./venv/bin/python scripts/publish_wechat_articles.py
 
 # dry-run 微信公众号文章
@@ -73,7 +73,7 @@ bash scripts/install_cron.sh uninstall
   ```
 
 - 不要手工在 `docs/published/` 创建发布标记，除非是在修复明确的发布状态问题。
-- 知乎和微信公众号发布成功后，脚本会写入对应的 `.meta.json` / `.wechat.meta.json` 标记；两个平台都完成后才会归档 Markdown。
+- 知乎发布、微信公众号草稿保存成功后，脚本会写入对应的 `.meta.json` / `.wechat.meta.json` 标记；两端都完成后才会归档 Markdown。
 - 文章发布队列按脚本逻辑从 `docs/pending/` 中选择文件，创建或修改文件时要注意发布时间顺序。
 
 ## 内容风格

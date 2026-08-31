@@ -50,17 +50,18 @@ def test_wechat_first_keeps_source_until_zhihu_meta_exists(tmp_path, monkeypatch
     monkeypatch.setattr(
         wp,
         "publish_wechat_article",
-        lambda title, body, *, cover_path=None, dry_run=False: "https://mp.weixin.qq.com/s/test",
+        lambda title, body, *, cover_path=None, source_dir=None, dry_run=False: "draft-url",
     )
 
     url = wp.publish_one_pending_to_wechat()
 
-    assert url == "https://mp.weixin.qq.com/s/test"
+    assert url == "draft-url"
     assert article.exists()
     assert not (published / "article.md").exists()
     meta = json.loads((published / "article.wechat.meta.json").read_text(encoding="utf-8"))
     assert meta["title"] == "公众号文"
     assert meta["platform"] == "wechat_mp"
+    assert meta["status"] == "draft"
 
 
 def test_wechat_archives_when_zhihu_meta_already_exists(tmp_path, monkeypatch):
@@ -73,7 +74,7 @@ def test_wechat_archives_when_zhihu_meta_already_exists(tmp_path, monkeypatch):
     monkeypatch.setattr(
         wp,
         "publish_wechat_article",
-        lambda title, body, *, cover_path=None, dry_run=False: "https://mp.weixin.qq.com/s/test",
+        lambda title, body, *, cover_path=None, source_dir=None, dry_run=False: "draft-url",
     )
 
     wp.publish_one_pending_to_wechat()
@@ -98,16 +99,18 @@ def test_skips_pending_file_that_already_has_wechat_meta(tmp_path, monkeypatch):
 
     calls = []
 
-    def fake_publish(title, body, *, cover_path=None, dry_run=False):
-        calls.append((title, body, cover_path, dry_run))
-        return "https://mp.weixin.qq.com/s/newer"
+    def fake_publish(title, body, *, cover_path=None, source_dir=None, dry_run=False):
+        calls.append((title, body, cover_path, source_dir, dry_run))
+        return "draft-url"
 
     monkeypatch.setattr(wp, "publish_wechat_article", fake_publish)
 
     url = wp.publish_one_pending_to_wechat()
 
-    assert url == "https://mp.weixin.qq.com/s/newer"
-    assert calls == [("新文", "正文", wp.WECHAT_COVER_DIR / "newer.png", False)]
+    assert url == "draft-url"
+    assert calls == [
+        ("新文", "正文", wp.WECHAT_COVER_DIR / "newer.png", pending, False)
+    ]
     assert older.exists()
     assert newer.exists()
     assert (published / "newer.wechat.meta.json").exists()
@@ -121,7 +124,7 @@ def test_dry_run_does_not_write_meta_or_archive(tmp_path, monkeypatch):
     monkeypatch.setattr(
         wp,
         "publish_wechat_article",
-        lambda title, body, *, cover_path=None, dry_run=False: "draft-url",
+        lambda title, body, *, cover_path=None, source_dir=None, dry_run=False: "draft-url",
     )
 
     url = wp.publish_one_pending_to_wechat(dry_run=True)
@@ -232,6 +235,17 @@ def test_page_validation_error_overrides_success_response():
         "publish",
         [{"base_resp": {"ret": 0}}],
     )
+
+
+def test_explicit_publish_action_is_rejected(monkeypatch):
+    monkeypatch.setattr(
+        pub,
+        "load_config",
+        lambda: {"wechat_mp": {"publish_action": "publish"}},
+    )
+
+    with pytest.raises(ValueError, match="仅允许保存到草稿箱"):
+        pub.publish_wechat_article("标题", "正文")
 
 
 def test_draft_saved_url_requires_material_id_and_not_new():
