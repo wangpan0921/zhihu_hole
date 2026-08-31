@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
 from playwright.sync_api import BrowserContext, Locator, Page, sync_playwright
@@ -23,6 +23,23 @@ log = get_logger("wechat_article_publisher")
 
 MP_HOME_URL = "https://mp.weixin.qq.com/"
 DEFAULT_EDIT_PATH = "/cgi-bin/appmsg"
+ACTION_ENDPOINT_HINTS = {
+    "draft": ("operate_appmsg", "appmsg", "draft"),
+    "publish": ("freepublish", "action=publish", "sub=publish", "masssend"),
+}
+VALIDATION_ERROR_TEXTS = (
+    "必须插入一张图片",
+    "请插入一张图片",
+    "请上传封面",
+    "请设置封面",
+    "封面不能为空",
+    "标题不能为空",
+    "正文不能为空",
+)
+SUCCESS_TEXTS = {
+    "draft": ("保存成功", "已保存"),
+    "publish": ("发表成功", "发布成功", "已发表"),
+}
 
 
 def _shot(page: Page, name: str) -> None:
@@ -319,6 +336,69 @@ def _paste_html_body(page: Page, body_html: str) -> bool:
     return length > 50
 
 
+def _cover_is_ready(page: Page) -> bool:
+    selectors = (
+        "#js_cover_area .js_cover_preview_new",
+        "#js_cover_area .js_cover_preview_square",
+    )
+    for selector in selectors:
+        try:
+            locator = page.locator(selector).first
+            if locator.count() and locator.is_visible():
+                return True
+        except Exception:
+            continue
+
+    try:
+        default_cover = page.locator(
+            "#js_cover_area .js_share_type_image"
+        ).first
+        return bool(default_cover.count() and default_cover.is_visible())
+    except Exception:
+        return False
+
+
+def _upload_cover_as_first_image(page: Page, cover_path: Path) -> bool:
+    if not cover_path.is_file():
+        log.warning("微信公众号封面文件不存在：%s", cover_path)
+        return False
+
+    body = _body_locator(page)
+    if body is None:
+        log.warning("上传封面前找不到正文编辑器")
+        return False
+
+    try:
+        body.click(timeout=3000)
+        page.keyboard.press("Control+Home")
+        image_count_before = body.locator("img").count()
+        file_input = page.locator(
+            "input[type=\"file\"][accept*=\"image\"]"
+        ).first
+        if not file_input.count():
+            log.warning("找不到微信公众号图片上传 input")
+            return False
+        file_input.set_input_files(str(cover_path), timeout=10000)
+    except Exception as e:  # noqa: BLE001
+        log.warning("上传微信公众号封面失败：%s", e)
+        return False
+
+    end = time.time() + 30
+    while time.time() < end:
+        try:
+            image_inserted = body.locator("img").count() > image_count_before
+        except Exception:
+            image_inserted = False
+        if image_inserted and _cover_is_ready(page):
+            log.info("封面已作为正文首图上传，公众号已识别默认封面")
+            return True
+        page.wait_for_timeout(500)
+
+    log.warning("封面上传后未同时检测到正文图片和默认封面状态")
+    return False
+
+
+
 def _click_button_by_text(page: Page, texts: tuple[str, ...]) -> bool:
     for text in texts:
         for sel in (
@@ -354,10 +434,95 @@ def _perform_action(page: Page, action: str) -> bool:
     raise ValueError(f"未知 wechat_mp.publish_action：{action}")
 
 
+def _action_response_payload(
+    response: Any, action: str
+) -> Optional[dict[str, Any]]:
+    try:
+        request = response.request
+        url = str(response.url).lower()
+        post_data = str(request.post_data or "").lower()
+        signature = f"{url}\n{post_data}"
+        if request.method.upper() != "POST":
+            return None
+        if not any(hint in signature for hint in ACTION_ENDPOINT_HINTS[action]):
+            return None
+        payload = response.json()
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
+def _base_response_ret(payload: dict[str, Any]) -> Optional[int]:
+    base = payload.get("base_resp") or payload.get("baseResp")
+    if not isinstance(base, dict):
+        return None
+    ret = base.get("ret")
+    try:
+        return int(ret)
+    except (TypeError, ValueError):
+        return None
+
+
+def _visible_text(page: Page, texts: tuple[str, ...]) -> Optional[str]:
+    for text in texts:
+        try:
+            matches = page.get_by_text(text, exact=False)
+            for index in range(matches.count()):
+                if matches.nth(index).is_visible():
+                    return text
+        except Exception:
+            continue
+    return None
+
+
+def _saved_url(url: str) -> bool:
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    has_id = any(query.get(key) for key in ("appmsgid", "appmsg_id", "id"))
+    return has_id and query.get("isNew", ["0"])[0] != "1"
+
+
+def _verify_action_success(
+    page: Page,
+    action: str,
+    response_payloads: list[dict[str, Any]],
+) -> bool:
+    error_text = _visible_text(page, VALIDATION_ERROR_TEXTS)
+    if error_text:
+        log.error("微信公众号操作被页面校验拦截：%s", error_text)
+        return False
+
+    response_rets = [
+        ret
+        for payload in response_payloads
+        if (ret := _base_response_ret(payload)) is not None
+    ]
+    if any(ret != 0 for ret in response_rets):
+        log.error("微信公众号操作接口返回失败：ret=%s", response_rets)
+        return False
+    if any(ret == 0 for ret in response_rets):
+        log.info("微信公众号操作接口返回成功：ret=0")
+        return True
+
+    success_text = _visible_text(page, SUCCESS_TEXTS[action])
+    if success_text:
+        log.info("检测到微信公众号成功提示：%s", success_text)
+        return True
+
+    if action == "draft" and _saved_url(page.url):
+        log.info("微信公众号草稿 URL 已包含素材 ID：%s", page.url)
+        return True
+
+    log.error("未检测到微信公众号成功响应、成功提示或已保存素材 ID")
+    return False
+
+
+
 def publish_wechat_article(
     title: str,
     body_md: str,
     *,
+    cover_path: Optional[Path] = None,
     dry_run: bool = False,
 ) -> Optional[str]:
     """发布一篇微信公众号文章。
@@ -429,6 +594,16 @@ def publish_wechat_article(
         _shot(page, "03_body_typed")
         _dump_editor_html(page, "03_body_typed")
 
+        if not dry_run:
+            if cover_path is None:
+                browser.close()
+                raise RuntimeError("微信公众号发布前必须提供封面图")
+            if not _upload_cover_as_first_image(page, cover_path):
+                _shot(page, "04_cover_failed")
+                browser.close()
+                raise RuntimeError("微信公众号封面上传或识别失败")
+            _shot(page, "04_cover_uploaded")
+
         page.wait_for_timeout(2500)
         edit_url_after = page.url
 
@@ -439,13 +614,25 @@ def publish_wechat_article(
             browser.close()
             return edit_url_after
 
+        action_payloads: list[dict[str, Any]] = []
+
+        def capture_action_response(response: Any) -> None:
+            payload = _action_response_payload(response, publish_action)
+            if payload is not None:
+                action_payloads.append(payload)
+
+        page.on("response", capture_action_response)
         if not _perform_action(page, publish_action):
-            _shot(page, "04_action_failed")
+            _shot(page, "05_action_failed")
             browser.close()
             raise RuntimeError(f"没有找到微信公众号操作按钮：{publish_action}")
 
-        page.wait_for_timeout(5000)
-        _shot(page, "05_after_action")
+        page.wait_for_timeout(8000)
+        _shot(page, "06_after_action")
+        if not _verify_action_success(page, publish_action, action_payloads):
+            _shot(page, "07_action_unverified")
+            browser.close()
+            raise RuntimeError("微信公众号操作未通过成功校验，不写发布元数据")
         final_url = page.url
         try:
             context.storage_state(path=str(storage_state))

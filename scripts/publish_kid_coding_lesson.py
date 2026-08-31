@@ -151,7 +151,13 @@ def publish_lesson(
         if target == "wechat":
             url = publish_wechat_article(title, body, dry_run=dry_run)
         elif target == "zhihu":
-            url = publish_article(title, body, dry_run=dry_run)
+            url = publish_article(
+                title,
+                body,
+                dry_run=dry_run,
+                source_dir=article_file.parent,
+                image_cache_path=article_file.with_suffix(".zhihu.images.json"),
+            )
         else:  # argparse prevents this, keep explicit for type safety.
             raise ValueError(f"未知平台：{target}")
         results[target] = url

@@ -70,7 +70,13 @@ def publish_one_pending(*, dry_run: bool = False) -> Optional[str]:
     title, body = _extract_title_and_body(md_text, fallback_title=target.stem)
     log.info("标题：%s | 正文 %d 字", title, len(body))
 
-    article_url = publish_article(title, body, dry_run=dry_run)
+    publish_kwargs = {"dry_run": dry_run}
+    if "![" in body:
+        publish_kwargs.update(
+            source_dir=target.parent,
+            image_cache_path=target.with_suffix(".zhihu.images.json"),
+        )
+    article_url = publish_article(title, body, **publish_kwargs)
 
     if dry_run:
         log.info("dry_run=True，不归档；draft URL=%s", article_url)

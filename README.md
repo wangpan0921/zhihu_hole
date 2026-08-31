@@ -183,13 +183,19 @@ bash scripts/install_cron.sh status   # 查看
 ./venv/bin/python scripts/publish_wechat_articles.py --dry-run
 ```
 
-它会从 `docs/pending/` 按修改时间选最早的一篇 Markdown，套公众号排版模板后填入图文编辑器；`--dry-run` 不会点击发表，也不会归档。确认截图和编辑器内容正常后执行：
+它会从 `docs/pending/` 按修改时间选最早的一篇 Markdown，套公众号排版模板后填入图文编辑器；`--dry-run` 不会上传封面、点击发表或归档。正式发布前还要准备与 Markdown 同名的封面，例如：
+
+```text
+assets/wechat_covers/2026-08-30-文章标题.png
+```
+
+支持 `.png`、`.jpg`、`.jpeg` 和 `.webp`。正式发布会把封面作为正文首图上传，让公众号取首图作为默认封面。确认截图和编辑器内容正常后执行：
 
 ```bash
 ./venv/bin/python scripts/publish_wechat_articles.py
 ```
 
-发布成功后，脚本会先在 `docs/published/` 写 `{文件名}.wechat.meta.json` 作为公众号已发标记；只有当同名文章也已经存在知乎标记 `{文件名}.meta.json` 时，才会把源 Markdown 从 `docs/pending/` 移到 `docs/published/`。如果知乎还没发，源文件会继续留在 `docs/pending/` 供 19:00 的知乎专栏任务发布。同理，知乎发布后也会先判断公众号标记是否存在，两个平台都发布完成才归档源文件。后续 08:00 任务会跳过已有公众号标记的 pending 文件，继续找下一篇未发公众号的文章。
+脚本只有在页面没有校验错误，并检测到保存/发表接口 `ret=0`、成功提示或已保存素材 ID 后，才认为操作成功。发布成功后，脚本会先在 `docs/published/` 写 `{文件名}.wechat.meta.json` 作为公众号已发标记；只有当同名文章也已经存在知乎标记 `{文件名}.meta.json` 时，才会把源 Markdown 从 `docs/pending/` 移到 `docs/published/`。如果知乎还没发，源文件会继续留在 `docs/pending/` 供 19:00 的知乎专栏任务发布。同理，知乎发布后也会先判断公众号标记是否存在，两个平台都发布完成才归档源文件。后续 08:00 任务会跳过已有公众号标记的 pending 文件，继续找下一篇未发公众号的文章。
 
 配置在 `config.yaml` 的 `wechat_mp` 段：
 

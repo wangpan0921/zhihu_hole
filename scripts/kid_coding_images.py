@@ -8,8 +8,14 @@
 
 不覆盖需要手工/AI 的部分：AI 插画封面、excalidraw 概念示意图（见各课 配图.md）。
 
+生成完图片后，会自动读取同目录《配图.md》里每张图的「**插入位置**」，
+把 images/ 里「真实存在」的图片以 Markdown 形式插入文章对应位置（幂等，可重复运行）。
+没画的图（AI 插画 / excalidraw）会自动跳过，等图片补齐后再次运行即可补插。
+
 用法：
-    ./venv/bin/python scripts/kid_coding_images.py --lesson 2
+    ./venv/bin/python scripts/kid_coding_images.py --lesson 2              # 生成图片并自动插图
+    ./venv/bin/python scripts/kid_coding_images.py --lesson 2 --no-insert  # 只生成图片，不插图
+    ./venv/bin/python scripts/kid_coding_images.py --lesson 2 --insert-only  # 只按《配图.md》插图
 """
 from __future__ import annotations
 
@@ -235,6 +241,267 @@ def render_summary(title: str, lesson_no: int, items: list[str], out: Path):
     img.save(out)
 
 
+# ---------- 根据《配图.md》把图片插入文章对应位置 ----------
+#
+# 《配图.md》里每张图都有一行 `- **插入位置**：<描述>`。本模块把这些描述解析成
+# 文章里的锚点，再把对应的图片以 Markdown 形式插进去。做到：
+#   * 只插入 images/ 里「真实存在」的图片文件（AI 插画 / excalidraw 图没画就跳过）；
+#   * 可重复运行（幂等）——已插入过的图不会重复插入；
+#   * 找不到锚点时打印告警，不影响其它图。
+
+# 「必配 / 加分 / 运行截图」等标签 -> 图片类型
+FIG_HEADER_RE = re.compile(r"^##\s*图\s*(\d+)\s*【([^】]*)】\s*(.*)$")
+POS_RE = re.compile(r"^\s*[-*]\s*\*\*插入位置\*\*[：:]\s*(.+?)\s*$")
+
+
+def parse_illustration_plan(md: str) -> list[dict]:
+    """解析《配图.md》，返回每张图的 {num, tags, title, pos} 列表（按图号顺序）。"""
+    figs: list[dict] = []
+    cur: dict | None = None
+    for ln in md.splitlines():
+        m = FIG_HEADER_RE.match(ln.strip())
+        if m:
+            cur = {
+                "num": int(m.group(1)),
+                "tags": m.group(2),
+                "title": m.group(3).strip(),
+                "pos": None,
+            }
+            figs.append(cur)
+            continue
+        if cur and cur["pos"] is None:
+            pm = POS_RE.match(ln)
+            if pm:
+                cur["pos"] = pm.group(1).strip()
+    return figs
+
+
+def _existing(outdir: Path, name: str) -> str | None:
+    return name if (outdir / name).exists() else None
+
+
+def resolve_image_file(fig: dict, outdir: Path, run_pool: list[str]) -> str | None:
+    """把一张「配图计划」映射到 images/ 里真实存在的文件名；映射不到返回 None。
+
+    映射优先级：
+      1) 明确的 figNN_*.png（新课的命名约定，与《配图.md》图号对应）；
+      2) 封面 -> cover.png；总结卡 -> summary.png；预告图 -> preview_next.png；
+      3) 运行截图 -> 按出现顺序取 run_01/run_02…（本脚本程序化生成的命名）。
+    """
+    tags = fig["tags"]
+    num = fig["num"]
+
+    # 1) 与图号对应的 figNN_*.png（若手工/JS 已按约定命名）
+    hit = sorted(outdir.glob(f"fig{num:02d}_*.png"))
+    if hit:
+        return hit[0].name
+
+    # 2) 语义化命名
+    if "封面" in tags or num == 1:
+        f = _existing(outdir, "cover.png")
+        if f:
+            return f
+    if "总结卡" in tags:
+        f = _existing(outdir, "summary.png")
+        if f:
+            return f
+    if "预告" in tags:
+        f = _existing(outdir, "preview_next.png")
+        if f:
+            return f
+
+    # 3) 运行截图 -> 依次消费 run_NN.png
+    if "运行截图" in tags and run_pool:
+        return run_pool.pop(0)
+
+    return None
+
+
+def _norm(s: str) -> str:
+    """归一化用于「节标题」模糊匹配：去掉空白与常见修饰后缀。"""
+    s = re.sub(r"\s+", "", s)
+    for suf in ("（I-do）", "(I-do)", "（We-do）", "(We-do)", "（You-do）", "(You-do)"):
+        s = s.replace(suf, "")
+    return s
+
+
+def _heading_lines(lines: list[str]) -> list[tuple[int, str]]:
+    """返回 [(行号, 标题文本)]，只取 ## / ### 级别的小节标题。"""
+    out = []
+    for i, ln in enumerate(lines):
+        m = re.match(r"^(#{2,4})\s+(.*)$", ln)
+        if m:
+            out.append((i, m.group(2).strip()))
+    return out
+
+
+def _section_end(lines: list[str], start: int) -> int:
+    """给定某个标题所在行 start，返回该小节内容的结束行（下一个同级或更高级标题之前）。"""
+    m = re.match(r"^(#{1,6})\s", lines[start])
+    level = len(m.group(1)) if m else 2
+    for i in range(start + 1, len(lines)):
+        hm = re.match(r"^(#{1,6})\s", lines[i])
+        if hm and len(hm.group(1)) <= level:
+            return i
+    return len(lines)
+
+
+def _find_quote_anchor(lines: list[str], lo: int, hi: int, needle: str) -> int | None:
+    """在 [lo, hi) 里找包含 needle（来自「插入位置」里的反引号片段）的行，返回其后一行。"""
+    key = _norm(needle)
+    if not key:
+        return None
+    for i in range(lo, hi):
+        if key in _norm(lines[i]):
+            return i + 1
+    return None
+
+
+def _seg_before_colon(s: str) -> str:
+    """取冒号前的段（如「第三步：…」→「第三步」）；无冒号则原样返回。"""
+    return re.split(r"[：:]", s, 1)[0]
+
+
+def _overlap(a: str, b: str) -> float:
+    """两个字符串的字符集重合比例（相对较短者），用于模糊匹配节标题。"""
+    sa, sb = set(a), set(b)
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / min(len(sa), len(sb))
+
+
+def _best_heading(section_key: str, headings: list[tuple[int, str]]) -> int | None:
+    """在 headings 里为「插入位置」抽出的节标题关键词找最匹配的一项，返回行号。"""
+    nk = _norm(section_key)
+    if not nk:
+        return None
+    # 1) 直接包含 / 前缀
+    for i, title in headings:
+        nt = _norm(title)
+        if nk in nt or nt.startswith(nk):
+            return i
+    # 2) 冒号前的「第N步」等前缀一致（配图与文章常在后半句用词不同）
+    key_prefix = _norm(_seg_before_colon(section_key))
+    if key_prefix and key_prefix != nk:
+        for i, title in headings:
+            if _norm(_seg_before_colon(title)) == key_prefix:
+                return i
+    # 3) 字符重合度最高且过阈值
+    best_i, best_score = None, 0.0
+    for i, title in headings:
+        sc = _overlap(nk, _norm(title))
+        if sc > best_score:
+            best_i, best_score = i, sc
+    return best_i if best_score >= 0.6 else None
+
+
+def resolve_anchor(pos: str, lines: list[str]) -> int | None:
+    """把一句「插入位置」描述解析成文章里的插入行号（在该行之前插入）。找不到返回 None。"""
+    headings = _heading_lines(lines)
+
+    # 文章顶部封面：紧跟第一行 `# 标题` 之后
+    if "顶部" in pos or "文章顶部" in pos:
+        for i, ln in enumerate(lines):
+            if re.match(r"^#\s+\S", ln):
+                return i + 1
+        return 1
+
+    # 文末预告：定位到「下一篇/下期预告」小节
+    if "文末" in pos or "预告" in pos:
+        for i, title in headings:
+            if "预告" in title or "下一篇" in title or "下期" in title:
+                return _section_end(lines, i)
+        # 没有专门的预告小节，就放到文末
+        return len(lines)
+
+    # 从「插入位置」里抽出带书名号「…」的节标题关键词
+    quoted = re.findall(r"[「『]([^」』]+)[」』]", pos)
+    section_key = quoted[0] if quoted else None
+
+    target_heading_idx = None
+    if section_key:
+        target_heading_idx = _best_heading(section_key, headings)
+
+    # 「今天你学会了」这类整节图：放在该节标题正下方
+    if target_heading_idx is not None and ("学会了" in pos or "知识清单" in pos):
+        return target_heading_idx + 1
+
+    if target_heading_idx is not None:
+        sec_start = target_heading_idx + 1
+        sec_end = _section_end(lines, target_heading_idx)
+
+        # 「节，`xxx` 之后」/「输出 xxx 之后」：优先锚定到代码/输出片段
+        code_hints = re.findall(r"`([^`]+)`", pos)
+        for hint in code_hints:
+            anchor = _find_quote_anchor(lines, sec_start, sec_end, hint)
+            if anchor is not None:
+                return anchor
+        # 「紧接真值表 markdown 之后」这类：退化为节末
+        return sec_end
+
+    # 兜底：整篇里找反引号片段
+    code_hints = re.findall(r"`([^`]+)`", pos)
+    for hint in code_hints:
+        anchor = _find_quote_anchor(lines, 0, len(lines), hint)
+        if anchor is not None:
+            return anchor
+
+    return None
+
+
+def insert_images(folder: Path, art: Path) -> int:
+    """读取同目录《配图.md》，把已生成的图片插入 art 对应位置。返回插入的图片数。"""
+    plan_path = folder / "配图.md"
+    if not plan_path.exists():
+        print("（无《配图.md》，跳过自动插图）")
+        return 0
+
+    outdir = folder / "images"
+    figs = parse_illustration_plan(plan_path.read_text(encoding="utf-8"))
+    lines = art.read_text(encoding="utf-8").splitlines()
+
+    # 运行截图池：本脚本按顺序生成 run_01.png、run_02.png…
+    run_pool = sorted(p.name for p in outdir.glob("run_*.png"))
+
+    # 计算每张图 -> (锚点行号, markdown)。先全部算好，再从后往前插，避免行号错位。
+    planned: list[tuple[int, int, str]] = []  # (anchor, fig_num, md_line)
+    for fig in figs:
+        pos = fig.get("pos")
+        if not pos:
+            continue
+        fname = resolve_image_file(fig, outdir, run_pool)
+        if not fname:
+            print(f"  · 图{fig['num']}【{fig['tags']}】暂无图片文件，跳过")
+            continue
+        rel = f"images/{fname}"
+        # 幂等：文章里已引用过该图就跳过
+        if any(rel in ln for ln in lines):
+            print(f"  · 图{fig['num']} 已存在（{rel}），跳过")
+            continue
+        anchor = resolve_anchor(pos, lines)
+        if anchor is None:
+            print(f"  · 图{fig['num']} 找不到插入位置「{pos}」，跳过")
+            continue
+        md = f"![图{fig['num']}]({rel})"
+        planned.append((anchor, fig["num"], md))
+
+    if not planned:
+        print("没有需要插入的新图片。")
+        return 0
+
+    # 从后往前插；同一锚点按图号升序稳定排列
+    planned.sort(key=lambda t: (t[0], t[1]))
+    for anchor, _num, md in sorted(planned, key=lambda t: t[0], reverse=True):
+        block = ["", md, ""]
+        lines[anchor:anchor] = block
+
+    art.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"已插入 {len(planned)} 张图片 → {art.name}")
+    for anchor, num, md in planned:
+        print(f"  + 图{num}: {md}")
+    return len(planned)
+
+
 def find_lesson(n: int):
     dirs = sorted(KID.glob(f"lesson-{n:02d}-*"))
     if not dirs:
@@ -250,6 +517,16 @@ def find_lesson(n: int):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--lesson", type=int, required=True)
+    ap.add_argument(
+        "--no-insert",
+        action="store_true",
+        help="只生成图片，不自动按《配图.md》插入文章（默认会插入）",
+    )
+    ap.add_argument(
+        "--insert-only",
+        action="store_true",
+        help="不重新生成图片，只把已有图片按《配图.md》插入文章",
+    )
     args = ap.parse_args()
     folder, art = find_lesson(args.lesson)
     corner = folder.name.split("-", 2)[-1]
@@ -257,25 +534,30 @@ def main() -> int:
     outdir = folder / "images"
     outdir.mkdir(exist_ok=True)
 
-    made = []
-    cover = outdir / "cover.png"
-    render_cover(title, args.lesson, corner, cover)
-    made.append(cover)
+    if not args.insert_only:
+        made = []
+        cover = outdir / "cover.png"
+        render_cover(title, args.lesson, corner, cover)
+        made.append(cover)
 
-    for i, code in enumerate(codes, 1):
-        out = run_code(code)
-        p = outdir / f"run_{i:02d}.png"
-        render_code_image(code, out, i, p)
-        made.append(p)
+        for i, code in enumerate(codes, 1):
+            out = run_code(code)
+            p = outdir / f"run_{i:02d}.png"
+            render_code_image(code, out, i, p)
+            made.append(p)
 
-    if summary:
-        s = outdir / "summary.png"
-        render_summary(title, args.lesson, summary, s)
-        made.append(s)
+        if summary:
+            s = outdir / "summary.png"
+            render_summary(title, args.lesson, summary, s)
+            made.append(s)
 
-    print(f"lesson={args.lesson} 生成 {len(made)} 张图 → {outdir}")
-    for m in made:
-        print(" -", m.name)
+        print(f"lesson={args.lesson} 生成 {len(made)} 张图 → {outdir}")
+        for m in made:
+            print(" -", m.name)
+
+    if not args.no_insert:
+        print("按《配图.md》插入图片：")
+        insert_images(folder, art)
     return 0
 
 

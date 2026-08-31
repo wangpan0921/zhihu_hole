@@ -298,7 +298,7 @@ alex: 12
 
 **加分挑战**：把物品英文名（`diamond`、`iron`、`gold`）用第 11 课的字典翻译成中文，输出类似 `steve: 钻石 80 个、金锭 8 个 —— 共 88 件`。这次你要维护的**不只是一个数字**，而是**每个玩家 → 一份物品明细**——**字典里装字典**（`total[who][item] = 数量`），第 11 课的「嵌套」套路今天有实战场景了。
 
-把你的代码或运行截图发在评论区。特别欢迎 **`ValueError` / `TypeError` 报错截图**——踩过这两个坑再爬起来，`split` 就真的是你的了。免费编辑器还是那两个：https://www.online-python.com 和 https://pythontutor.com/visualize.html#mode=display 。
+如果你在运行过程中有什么问题，发在评论区，我会一一解答。特别欢迎 **`ValueError` / `TypeError` 报错截图**——踩过这两个坑再爬起来，`split` 就真的是你的了。免费编辑器还是那两个：https://www.online-python.com 和 https://pythontutor.com/visualize.html#mode=display 。
 
 下一篇——第 13 课**《该不该出门冒险？》**。史蒂夫准备出门探险——**天黑了没？血量够不够？装备齐不齐？** 三件事同时成立才能出门，一件事不满足就得等。这种「多条件组合决策」，第 2 课的 `if` 已经打过底，今天要请出真正的主角：**布尔逻辑 `and / or / not`**，还有一条聪明人才知道的定律——**德摩根定律**。
 

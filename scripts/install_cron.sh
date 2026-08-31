@@ -7,6 +7,7 @@
 #   08:30  通过 publish-wechat-album-to-zhihu Skill 发布合集下一篇
 #   01:00  删除 debug/ 中 7 天以前的调试文件
 #   19:00  扫 docs/pending/ 发布一篇文章到知乎专栏（同一时刻，两条任务并行跑互不影响）
+#   21:00  发布 pytorch_training_efficiency/docs/pending/ 中的一篇到指定知乎专栏和公众号图文
 #   07:00  发布 morning slot 想法（data/pending 没有则现生现发）
 #   18:00  发布 evening slot 想法
 #
@@ -42,6 +43,7 @@ RUN_PUB_E="cd $PROJECT_DIR && $PY scripts/publish_slot.py evening >> $LOG 2>&1"
 RUN_PUB_ARTICLE="cd $PROJECT_DIR && $PY scripts/publish_articles.py >> $LOG 2>&1"
 RUN_PUB_WECHAT="cd $PROJECT_DIR && $PY scripts/publish_wechat_articles.py >> $LOG 2>&1"
 RUN_PUB_WECHAT_ALBUM="$WECHAT_ALBUM_SKILL_RUNNER >> $LOG 2>&1"
+RUN_PUB_TRAINING="cd $PROJECT_DIR && $PY scripts/publish_training_efficiency.py >> $LOG 2>&1"
 RUN_CLEANUP_DEBUG="cd $PROJECT_DIR && mkdir -p logs && scripts/cleanup_debug.sh >> logs/debug-cleanup.log 2>&1"
 
 # 8 行任务（含一行注释 tag）
@@ -52,12 +54,13 @@ $TAG
 30 8 * * *   $RUN_PUB_WECHAT_ALBUM
 0 19 * * *   $RUN_GEN
 0 19 * * *   $RUN_PUB_ARTICLE
+0 21 * * *   $RUN_PUB_TRAINING
 0  7 * * *   $RUN_PUB_M
 0 18 * * *   $RUN_PUB_E
 EOF
 
 # tag 后面跟着的任务行数（用于 install/uninstall 时整块替换）
-TASK_LINES=7
+TASK_LINES=8
 
 cmd="${1:-status}"
 

@@ -98,6 +98,17 @@ article:
   # 发布弹窗里要选的目标专栏名（按字面文本匹配）
   column_name: "Agent工坊"
 
+# 训练效能工程成长记录系列。
+# 人工审核通过后，将文章从 draft/ 移到 pending/；每天 21:00 最多发布一篇。
+# 公众号现有发布入口能发布图文并记录 album_name；若后台需要额外选择合集，
+# 发布后需在公众号后台核对或补充合集归集动作。
+training_efficiency:
+  root_dir: "pytorch_training_efficiency/docs"
+  zhihu_column_name: "训练效能工程成长记录"
+  wechat_album_name: "训练效能工程成长记录"
+  publish_hour: 21
+  publish_minute: 0
+
 # 微信公众号合集 → 独立知乎专栏。每天 08:30 只发布下一篇。
 wechat_album_to_zhihu:
   album_url: "https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzY5MDM1OTU3Mg==&action=getalbum&album_id=4594165319145046019#wechat_redirect"
@@ -109,6 +120,8 @@ wechat_album_to_zhihu:
 # 每天 08:00 cron 触发 scripts/publish_wechat_articles.py：
 #   - 扫 docs/pending/ 下的 .md，挑 mtime 最早的一篇
 #   - 使用公众号友好的 HTML 模板粘贴到图文编辑器
+#   - 从 assets/wechat_covers/ 读取同名封面，作为正文首图上传
+#   - 仅在接口 ret=0、成功提示或素材 ID 等真实证据存在时判定成功
 #   - 成功后写 {stem}.wechat.meta.json，作为公众号已发标记
 #   - 仅当知乎 {stem}.meta.json 也存在时，才把 md 移到 docs/published/
 #   - 目录为空或 pending 文件都已有公众号标记就什么都不做

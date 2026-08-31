@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 import time
 from pathlib import Path
@@ -136,12 +137,20 @@ def _count_html_tables(html_text: str) -> int:
     return html_text.lower().count("<table")
 
 
-def _paste_stats_valid(stats: dict, expected_tables: int) -> bool:
-    """校验正文规模、块级结构及表格是否完整进入编辑器。"""
+def _count_html_images(html_text: str) -> int:
+    """统计待粘贴 HTML 中的 img 元素。"""
+    return html_text.lower().count("<img")
+
+
+def _paste_stats_valid(
+    stats: dict, expected_tables: int, expected_images: int = 0
+) -> bool:
+    """校验正文规模、块级结构、表格及图片是否完整进入编辑器。"""
     return (
         stats.get("blocks", 0) > 0
         and stats.get("len", 0) > 50
         and stats.get("tables", 0) >= expected_tables
+        and stats.get("images", 0) >= expected_images
     )
 
 
@@ -176,11 +185,43 @@ def _verify_published_tables(
     return observed >= expected_tables
 
 
+def _verify_published_images(
+    page: Page,
+    published_url: str,
+    expected_images: int,
+) -> bool:
+    """发布后打开文章页，确认渲染出的正文图片数没有减少。"""
+    if expected_images == 0:
+        return True
+    try:
+        page.goto(published_url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_timeout(3000)
+        observed = page.evaluate(
+            """() => {
+                const root = document.querySelector(
+                    ".Post-RichTextContainer, article .RichText, article"
+                );
+                return (root || document).querySelectorAll("img").length;
+            }"""
+        )
+    except Exception as e:  # noqa: BLE001
+        log.warning("发布后图片校验失败：%s", e)
+        return False
+
+    log.info(
+        "发布后图片校验：期望 %d 张，页面渲染 %d 张",
+        expected_images,
+        observed,
+    )
+    return observed >= expected_images
+
+
 def _paste_html_body(
     page: Page,
     body_html: str,
     *,
     expected_tables: int = 0,
+    expected_images: int = 0,
 ) -> bool:
     """首选策略：把 Markdown 转好的 HTML 通过 text/html 粘贴事件塞进 Draft.js。
 
@@ -190,8 +231,8 @@ def _paste_html_body(
     稳定，不会出现「列表上下文吞掉后续所有内容、## 与 - 以纯文本出现」的崩坏。
 
     成功判定：粘贴后编辑器内出现 >0 个块级标签
-    （h2/ul/ol/blockquote/pre/table），textContent 长度达到一定规模，且表格数
-    不少于 Markdown/HTML 源文档中的表格数。
+    （h2/ul/ol/blockquote/pre/table），textContent 长度达到一定规模，且表格、图片数
+    不少于 Markdown/HTML 源文档中的对应数量。
     """
     sel = _editor_selector(page)
     if sel is None:
@@ -248,7 +289,7 @@ def _paste_html_body(
         stats = page.evaluate(
             """(s) => {
                 const el = document.querySelector(s);
-                if (!el) return { len: 0, blocks: 0, tables: 0 };
+                if (!el) return { len: 0, blocks: 0, tables: 0, images: 0 };
                 const blocks = el.querySelectorAll(
                     'h2,h3,ul,ol,blockquote,pre,table'
                 ).length;
@@ -256,21 +297,23 @@ def _paste_html_body(
                     len: (el.textContent || "").length,
                     blocks,
                     tables: el.querySelectorAll("table").length,
+                    images: el.querySelectorAll("img").length,
                 };
             }""",
             sel,
         )
     except Exception:
-        stats = {"len": 0, "blocks": 0, "tables": 0}
+        stats = {"len": 0, "blocks": 0, "tables": 0, "images": 0}
 
     log.info(
-        "html paste → 编辑器内 %d 字 / %d 个块级元素 / %d 张表格",
+        "html paste → 编辑器内 %d 字 / %d 个块级元素 / %d 张表格 / %d 张图片",
         stats.get("len", 0),
         stats.get("blocks", 0),
         stats.get("tables", 0),
+        stats.get("images", 0),
     )
-    # 至少要有结构化块、足够正文，并保留所有期望表格。
-    return _paste_stats_valid(stats, expected_tables)
+    # 至少要有结构化块、足够正文，并保留所有期望表格和图片。
+    return _paste_stats_valid(stats, expected_tables, expected_images)
 
 
 CODE_FENCE_RE = re.compile(r"^\s*```")
@@ -674,6 +717,112 @@ def _clear_editor_body(page: Page) -> bool:
         return False
 
 
+_MD_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)\s]+)(?:\s+['\"][^)]*['\"])?\)")
+
+
+def _local_image_paths(body_md: str, source_dir: Optional[Path]) -> list[tuple[str, Path]]:
+    """Return local Markdown image references and resolved files.
+
+    Remote URLs are deliberately ignored because they already work when pasted.
+    """
+    if source_dir is None:
+        return []
+    found: list[tuple[str, Path]] = []
+    seen: set[str] = set()
+    for match in _MD_IMAGE_RE.finditer(body_md):
+        ref = match.group(2)
+        if re.match(r"^(?:https?:|data:|//)", ref, re.I):
+            continue
+        path = Path(ref).expanduser()
+        if not path.is_absolute():
+            path = source_dir / path
+        key = str(path.resolve())
+        if key not in seen:
+            found.append((ref, path.resolve()))
+            seen.add(key)
+    return found
+
+
+def _load_image_cache(path: Optional[Path]) -> dict[str, str]:
+    if path is None or not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return {str(k): str(v) for k, v in data.items() if isinstance(v, str)}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("读取图片上传缓存失败：%s", exc)
+        return {}
+
+
+def _save_image_cache(path: Optional[Path], data: dict[str, str]) -> None:
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _prepare_body_images(
+    page: Page,
+    body_md: str,
+    *,
+    source_dir: Optional[Path],
+    cache_path: Optional[Path],
+) -> str:
+    """Upload local images and rewrite their Markdown references to CDN URLs."""
+    local_images = _local_image_paths(body_md, source_dir)
+    if not local_images:
+        return body_md
+    cache = _load_image_cache(cache_path)
+    pending = [(ref, path) for ref, path in local_images if str(path) not in cache]
+    if pending:
+        editor = _editor_selector(page)
+        for _ref, path in pending:
+            if not _clear_editor_body(page):
+                raise RuntimeError("上传图片前无法清空临时图片节点")
+            loc = page.locator(f"{editor} img" if editor else "img")
+            before = loc.count()
+            inputs = page.locator("input[type='file']")
+            image_input = None
+            for index in range(inputs.count()):
+                accept = (inputs.nth(index).get_attribute("accept") or "").lower()
+                if "image/" in accept:
+                    image_input = inputs.nth(index)
+                    break
+            if image_input is None:
+                raise RuntimeError("知乎编辑器中未找到图片上传 input")
+            if editor:
+                page.locator(editor).first.click(timeout=3000)
+            image_input.set_input_files(str(path))
+            log.info("已提交正文图片：%s", path.name)
+            deadline = time.time() + 30
+            url = ""
+            while time.time() < deadline:
+                current = page.locator(f"{editor} img" if editor else "img")
+                for index in range(before, current.count()):
+                    src = current.nth(index).get_attribute("src") or ""
+                    if src.startswith("http"):
+                        url = src
+                        break
+                if url:
+                    break
+                page.wait_for_timeout(500)
+            if not url:
+                raise RuntimeError(f"知乎图片上传失败：{path.name} 未获得图片 URL")
+            cache[str(path)] = url
+            _save_image_cache(cache_path, cache)
+        if not _clear_editor_body(page):
+            raise RuntimeError("上传图片后无法清空临时图片节点")
+    replacements = {ref: cache[str(path)] for ref, path in local_images}
+
+    def _replace_image(match: re.Match[str]) -> str:
+        ref = match.group(2)
+        url = replacements.get(ref)
+        return match.group(0) if not url else match.group(0).replace(ref, url, 1)
+
+    body_md = _MD_IMAGE_RE.sub(_replace_image, body_md)
+    return body_md
+
+
 def _confirm_publish_modal(page: Page) -> bool:
     """点完底部「发布」后，可能弹出二次确认（"确认发布到 XX 专栏？"），点确认。
     没弹模态就直接 True。"""
@@ -710,6 +859,8 @@ def publish_article(
     column_name: Optional[str] = None,
     body_html_override: Optional[str] = None,
     edit_url: Optional[str] = None,
+    source_dir: Optional[Path] = None,
+    image_cache_path: Optional[Path] = None,
 ) -> Optional[str]:
     """新建文章，或通过 edit_url 更新一篇已发布文章。
 
@@ -786,10 +937,18 @@ def publish_article(
         #    （type 路径对列表/代码块上下文不可靠，仅作兜底）。
         from .markdown_html import count_markdown_tables, markdown_to_html
 
+        body_md = _prepare_body_images(
+            page,
+            body_md,
+            source_dir=source_dir,
+            cache_path=image_cache_path,
+        )
+
         body_html = body_html_override or markdown_to_html(body_md)
         source_tables = count_markdown_tables(body_md)
         generated_tables = _count_html_tables(body_html)
         expected_tables = max(source_tables, generated_tables)
+        expected_images = _count_html_images(body_html)
         if generated_tables < source_tables:
             browser.close()
             raise RuntimeError(
@@ -798,14 +957,18 @@ def publish_article(
             )
 
         body_ok = _paste_html_body(
-            page, body_html, expected_tables=expected_tables
+            page,
+            body_html,
+            expected_tables=expected_tables,
+            expected_images=expected_images,
         )
-        if not body_ok and expected_tables:
-            _shot(page, "03_table_validation_failed")
-            _dump_editor_html(page, "03_table_validation_failed")
+        if not body_ok and (expected_tables or expected_images):
+            _shot(page, "03_content_validation_failed")
+            _dump_editor_html(page, "03_content_validation_failed")
             browser.close()
             raise RuntimeError(
-                f"知乎编辑器未完整保留 {expected_tables} 张表格，已停止发布"
+                "知乎编辑器未完整保留正文结构："
+                f"{expected_tables} 张表格 / {expected_images} 张图片，已停止发布"
             )
         if not body_ok:
             log.warning("HTML 粘贴未达预期，回退到逐行 type")
@@ -860,6 +1023,11 @@ def publish_article(
             ):
                 _shot(page, "07_published_table_verification_failed")
                 log.error("文章已更新，但发布页表格校验未通过：%s", published_url)
+            if not _verify_published_images(
+                page, published_url, expected_images
+            ):
+                _shot(page, "07_published_image_verification_failed")
+                log.warning("文章已更新，但发布页图片校验未通过；保留更新结果并继续返回 URL")
             try:
                 context.storage_state(path=str(storage_state))
             except Exception:
@@ -897,6 +1065,10 @@ def publish_article(
         if not _verify_published_tables(page, published_url, expected_tables):
             _shot(page, "07_published_table_verification_failed")
             log.error("文章已发布，但发布页表格校验未通过：%s", published_url)
+
+        if not _verify_published_images(page, published_url, expected_images):
+            _shot(page, "07_published_image_verification_failed")
+            log.warning("文章已发布，但发布页图片校验未通过；保留发布结果并继续返回 URL")
 
         # 顺手刷新登录态
         try:

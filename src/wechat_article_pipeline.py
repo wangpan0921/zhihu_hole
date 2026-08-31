@@ -10,10 +10,12 @@ from .article_state import (
     pending_files_unpublished_for,
     write_platform_meta,
 )
-from .utils import get_logger
+from .utils import PROJECT_ROOT, get_logger
 from .wechat_article_publisher import publish_wechat_article
 
 log = get_logger("wechat_article_pipeline")
+WECHAT_COVER_DIR = PROJECT_ROOT / "assets" / "wechat_covers"
+WECHAT_COVER_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp")
 
 
 def _extract_title_and_body(md_text: str, fallback_title: str) -> Tuple[str, str]:
@@ -38,6 +40,14 @@ def _pick_oldest_pending() -> Optional[Path]:
     return files[0] if files else None
 
 
+def _cover_path_for(article: Path) -> Optional[Path]:
+    for extension in WECHAT_COVER_EXTENSIONS:
+        candidate = WECHAT_COVER_DIR / f"{article.stem}{extension}"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
     """从 docs/pending 选一篇发布到微信公众号。
 
@@ -55,7 +65,19 @@ def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
     title, body = _extract_title_and_body(md_text, fallback_title=target.stem)
     log.info("微信公众号标题：%s | 正文 %d 字", title, len(body))
 
-    article_url = publish_wechat_article(title, body, dry_run=dry_run)
+    cover_path = _cover_path_for(target)
+    if not dry_run and cover_path is None:
+        expected = WECHAT_COVER_DIR / f"{target.stem}.png"
+        raise RuntimeError(f"微信公众号封面不存在，请先生成：{expected}")
+    if cover_path is not None:
+        log.info("微信公众号封面：%s", cover_path)
+
+    article_url = publish_wechat_article(
+        title,
+        body,
+        cover_path=cover_path,
+        dry_run=dry_run,
+    )
 
     if dry_run:
         log.info("dry_run=True，不归档；编辑 URL=%s", article_url)
