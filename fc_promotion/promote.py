@@ -1,0 +1,291 @@
+"""推广主编排。
+
+流程（以知乎为例）：
+  1. 用本机登录态打开平台搜索页，按关键词找有需求的问题/帖子
+  2. 为每条生成一条自然的推广评论（突出体积小/不占空间/耗电低 + 下载方式）
+  3. 可选：用本人账号发出评论（--post；默认 dry-run 不发，只预览）
+  4. 把每一条推广记录写入飞书「推广数据库」多维表格，方便人工查看
+
+安全：
+  - 仅在本机、有登录态时运行；云端无登录态会直接搜不到。
+  - 默认 dry-run。真正发评论需显式 --post，且受 config 频控限制。
+  - 自动发评论有平台风控风险，请把 --max 调小、间隔调大。
+
+    python -m fc_promotion.promote --dry-run
+    python -m fc_promotion.promote --platform zhihu --post --max 2
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import random
+import sys
+import time
+from dataclasses import dataclass, field
+
+from . import config, copywriter
+from .common.feishu_bitable import FeishuBitable
+from .common.logging_utils import get_logger
+from .common.login import get_login
+
+log = get_logger("promote")
+
+
+@dataclass
+class Lead:
+    platform: str
+    title: str
+    url: str
+    comment: str = ""
+    status: str = "待发布"
+    extra: dict = field(default_factory=dict)
+
+
+def is_android_relevant(title: str) -> bool:
+    """判断一条线索标题是否与"安卓悬浮时钟"相关。
+
+    规则：
+      1. 命中任一排除词（苹果/iOS/桌面/电脑端等）→ 判为不相关。
+      2. 若 config.REQUIRE_ANDROID_HINT 为真，则还要求标题含安卓/手机等正向信号。
+    标题为空时按不相关处理。
+    """
+    if not title:
+        return False
+    low = title.lower()
+    for bad in config.EXCLUDE_KEYWORDS:
+        if bad.lower() in low:
+            return False
+    if config.REQUIRE_ANDROID_HINT:
+        return any(hint.lower() in low for hint in config.ANDROID_HINT_KEYWORDS)
+    return True
+
+
+def search_zhihu_leads(keywords: list[str], limit: int) -> list[Lead]:
+    """用持久化 profile（拟人化）打开知乎搜索页，抓取问题链接作为推广线索。
+
+    用 is_android_relevant 过滤苹果版/桌面版等非安卓线索。
+    必须用持久化 profile，否则知乎返回 40362 风控页。
+    """
+    from .common import humanized_browser as hb
+
+    leads: list[Lead] = []
+    skipped = 0
+    tmpl = config.SEARCH_TARGETS["zhihu"]["search_url"]
+    with hb.persistent_context(config.ZHIHU_PROFILE, headless=False) as ctx:
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        # 先过首页，拿到正常会话再搜，降低风控
+        page.goto("https://www.zhihu.com/", wait_until="domcontentloaded", timeout=40000)
+        hb.human_pause(2, 4)
+        if not any(c.get("name") == "z_c0" for c in ctx.cookies()):
+            raise RuntimeError(
+                "知乎未登录（持久化 profile 内无登录态）。请先在本机扫码：\n"
+                "  python -m fc_promotion.login_cli zhihu"
+            )
+        for kw in keywords:
+            if len(leads) >= limit:
+                break
+            page.goto(tmpl.format(kw=kw), wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            hb.human_scroll(page, times=random.randint(2, 4))
+            anchors = page.locator("a[href*='/question/']")
+            count = min(anchors.count(), 15)
+            for i in range(count):
+                if len(leads) >= limit:
+                    break
+                try:
+                    a = anchors.nth(i)
+                    href = a.get_attribute("href") or ""
+                    title = (a.inner_text() or "").strip()
+                    if not href or not title:
+                        continue
+                    if href.startswith("//"):
+                        href = "https:" + href
+                    elif href.startswith("/"):
+                        href = "https://www.zhihu.com" + href
+                    if any(l.url == href for l in leads):
+                        continue
+                    if not is_android_relevant(title):
+                        skipped += 1
+                        log.info("跳过非安卓线索：%s", title[:40])
+                        continue
+                    leads.append(Lead(platform="zhihu", title=title, url=href))
+                except Exception:  # noqa: BLE001
+                    continue
+    log.info("知乎收集到 %d 条安卓相关线索（过滤掉 %d 条非安卓）", len(leads), skipped)
+    return leads
+
+
+SEARCHERS = {
+    "zhihu": search_zhihu_leads,
+    # "toutiao": ..., "xiaohongshu": ...  待接入
+}
+
+
+def write_to_feishu(leads: list[Lead]) -> None:
+    """把推广记录写入飞书推广数据库多维表格。"""
+    if not leads:
+        return
+    bitable = FeishuBitable()
+    app_token = bitable.resolve_app_token(config.FEISHU_PROMO_URL)
+    # 首次运行先核对字段名，避免字段不匹配写入失败
+    try:
+        names = bitable.list_field_names(app_token=app_token, table_id=config.FEISHU_PROMO_TABLE_ID)
+        log.info("推广数据库字段：%s", names)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("读取飞书字段失败（继续尝试写入）：%s", exc)
+    today = dt.date.today().isoformat()
+    for lead in leads:
+        fields = {
+            config.FIELD_DATE: today,
+            config.FIELD_PLATFORM: lead.platform,
+            config.FIELD_TARGET_TITLE: lead.title,
+            config.FIELD_TARGET_URL: {"link": lead.url, "text": lead.url},
+            config.FIELD_COMMENT: lead.comment,
+            config.FIELD_STATUS: lead.status,
+        }
+        try:
+            rec = bitable.append_record(
+                app_token=app_token,
+                table_id=config.FEISHU_PROMO_TABLE_ID,
+                fields=fields,
+            )
+            log.info("写入飞书成功 record=%s %s", rec, lead.title[:30])
+        except Exception as exc:  # noqa: BLE001
+            log.error("写入飞书失败：%s | %s", exc, lead.title[:30])
+
+
+def post_comment_zhihu(lead: Lead) -> bool:
+    """用持久化 profile（拟人化）在知乎问题下写一条简短回答并发布。
+
+    发布动作：打开问题页 → 拟人滚动 → 点"写回答" → 逐字输入文案 → 点"发布回答"。
+    知乎 DOM 会改版，关键节点用多候选选择器兜底；任一环节失败则返回 False（不误发）。
+    """
+    from .common import humanized_browser as hb
+
+    text = lead.comment
+    try:
+        with hb.persistent_context(config.ZHIHU_PROFILE, headless=False) as ctx:
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            page.goto("https://www.zhihu.com/", wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            if not any(c.get("name") == "z_c0" for c in ctx.cookies()):
+                log.error("知乎未登录，无法发布。先 python -m fc_promotion.login_cli zhihu")
+                return False
+
+            # 规范到问题主页（去掉 /answer/xxx 尾巴，回答入口在问题页）
+            qurl = lead.url.split("/answer/")[0]
+            page.goto(qurl, wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            if "40362" in (page.title() or "") or page.locator("text=请求存在异常").count() > 0:
+                log.error("打开问题页仍触发风控，跳过：%s", qurl)
+                return False
+            hb.human_scroll(page, times=random.randint(2, 4))
+
+            # 1) 点"写回答"
+            write_btn = None
+            for sel in ("button:has-text('写回答')", "a:has-text('写回答')", ".QuestionHeaderActions button:has-text('回答')"):
+                loc = page.locator(sel).first
+                if loc.count() > 0:
+                    write_btn = loc
+                    break
+            if write_btn is None:
+                log.error("未找到'写回答'入口（可能未登录或页面改版），跳过：%s", qurl)
+                return False
+            write_btn.click()
+            hb.human_pause(1.5, 3)
+
+            # 2) 定位编辑器并逐字输入
+            editor = None
+            for sel in (".public-DraftEditor-content", "div[contenteditable='true']", ".Editable-content"):
+                loc = page.locator(sel).first
+                if loc.count() > 0:
+                    editor = loc
+                    break
+            if editor is None:
+                log.error("未找到回答编辑器，跳过：%s", qurl)
+                return False
+            hb.human_type(page, editor, text)
+            hb.human_pause(1.5, 3)
+
+            # 3) 点"发布回答"
+            pub = None
+            for sel in ("button:has-text('发布回答')", "button:has-text('发布')", ".AnswerAdd button:has-text('发布')"):
+                loc = page.locator(sel).first
+                if loc.count() > 0:
+                    pub = loc
+                    break
+            if pub is None:
+                log.error("未找到'发布'按钮，跳过（内容未提交）：%s", qurl)
+                return False
+            pub.click()
+            hb.human_pause(2, 4)
+            log.info("已提交回答：%s", qurl)
+            return True
+    except Exception as exc:  # noqa: BLE001
+        log.error("发布失败：%s", exc)
+        return False
+
+
+def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[Lead]:
+    searcher = SEARCHERS.get(platform)
+    if searcher is None:
+        raise SystemExit(f"平台 {platform} 的搜索器尚未接入；已接入：{list(SEARCHERS)}")
+
+    leads = searcher(config.SEARCH_KEYWORDS, max_leads)
+    for lead in leads:
+        lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
+
+    if post:
+        # B1：本次运行随机发 1~3 条，发一条停 60 秒再发下一条
+        quota = random.randint(config.DAILY_MIN_COMMENTS, config.DAILY_MAX_COMMENTS)
+        quota = min(quota, max_leads, len(leads))
+        log.info("本次计划发布 %d 条（每天随机 1~3，间隔 %d 秒）", quota, config.MIN_SECONDS_BETWEEN)
+        posted = 0
+        for lead in leads:
+            if posted >= quota:
+                lead.status = "未安排（超出今日配额）"
+                continue
+            ok = post_comment_zhihu(lead) if platform == "zhihu" else False
+            lead.status = "已发布" if ok else "发布失败/待人工"
+            posted += 1
+            if posted < quota:
+                time.sleep(config.MIN_SECONDS_BETWEEN)
+    else:
+        for lead in leads:
+            lead.status = "待人工发布（dry-run）"
+
+    if to_feishu:
+        write_to_feishu(leads)
+    return leads
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="悬浮时钟跨平台推广")
+    parser.add_argument("--platform", default="zhihu", help="平台（默认 zhihu）")
+    parser.add_argument("--max", type=int, default=config.MAX_COMMENTS_PER_RUN, help="最多处理线索数")
+    parser.add_argument("--post", action="store_true", help="真正用本人账号发评论（默认只预览）")
+    parser.add_argument("--dry-run", action="store_true", help="只预览，不发布、不写飞书")
+    parser.add_argument("--no-feishu", action="store_true", help="不写飞书")
+    parser.add_argument(
+        "--require-android-hint",
+        action="store_true",
+        help="更严：标题必须含安卓/手机等正向信号才保留（召回更少但更准）",
+    )
+    args = parser.parse_args(argv)
+
+    if args.require_android_hint:
+        config.REQUIRE_ANDROID_HINT = True
+
+    to_feishu = not (args.dry_run or args.no_feishu)
+    post = args.post and not args.dry_run
+
+    leads = run(args.platform, max_leads=args.max, post=post, to_feishu=to_feishu)
+
+    print(f"\n==== 共 {len(leads)} 条推广线索（platform={args.platform}）====")
+    for i, lead in enumerate(leads, 1):
+        print(f"\n[{i}] {lead.title}\n  {lead.url}\n  状态：{lead.status}\n  文案：{lead.comment}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
