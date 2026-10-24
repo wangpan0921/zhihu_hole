@@ -1,0 +1,9 @@
+# fc_promotion 额外依赖（大部分已在 zhihu 项目 venv 中）
+# 直接复用 zhihu 项目的 venv 即可：source ../venv/bin/activate
+#   playwright>=1.45.0      浏览器自动化
+#   requests>=2.31.0        飞书 API
+#   python-dotenv>=1.0.0    读取 .env 中的飞书凭据
+#   Pillow>=10.0.0          登录二维码解码
+#   pyzbar>=0.1.9           二维码解码（系统需 libzbar0）
+#   qrcode>=7.4.2           终端渲染二维码
+# 本文件仅作记录；安装用 zhihu 项目根目录的 requirements.txt。
