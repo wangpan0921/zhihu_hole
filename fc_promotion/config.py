@@ -77,7 +77,80 @@ SEARCH_TARGETS = {
     "zhihu": {
         "search_url": "https://www.zhihu.com/search?type=content&q={kw}",
     },
-    # 头条号 / 小红书待接入，补 search_url 与选择器后启用
+    # 酷安：安卓工具垂直社区，图文广场搜索；对第三方下载链接容忍度高
+    "coolapk": {
+        "search_url": "https://www.coolapk.com/s?q={kw}&type=feed",
+    },
+    # 头条号：今日头条站内搜索（文章/问答），导流能力强
+    "toutiao": {
+        "search_url": "https://so.toutiao.com/search?dvpf=pc&keyword={kw}&pd=question",
+    },
+    # 小红书：explore 搜索；风控最凶，评论带链接易限流，务必低频
+    "xiaohongshu": {
+        "search_url": "https://www.xiaohongshu.com/search_result?keyword={kw}",
+    },
+}
+
+# ---- 各平台登录态/浏览器 profile 与登录判定 cookie ----
+# 所有平台都走持久化 profile（反风控通用）。profile 名即 data/auth/<name>_chrome_profile。
+PLATFORM_PROFILE = {
+    "zhihu": "zhihu",
+    "coolapk": "coolapk",
+    "toutiao": "toutiao",
+    "xiaohongshu": "xiaohongshu",
+}
+# 判定"已登录"的 cookie 名（任一存在即视为登录）
+PLATFORM_LOGIN_COOKIES = {
+    "zhihu": ["z_c0"],
+    "coolapk": ["uid", "username", "token"],
+    "toutiao": ["sessionid", "sso_uid_tt", "sid_tt"],
+    "xiaohongshu": ["web_session", "customerClientId"],
+}
+# 各平台首页（先过首页拿正常会话再搜，降低风控）
+PLATFORM_HOME = {
+    "zhihu": "https://www.zhihu.com/",
+    "coolapk": "https://www.coolapk.com/",
+    "toutiao": "https://www.toutiao.com/",
+    "xiaohongshu": "https://www.xiaohongshu.com/",
+}
+
+# 搜索结果里"线索链接"的 a 标签选择器（抓 href + 文本作标题）。
+# 选择器随站点改版会变，失效时本机 headful 跑一次、看 debug 截图调整。
+PLATFORM_LINK_SELECTOR = {
+    "zhihu": "a[href*='/question/']",
+    "coolapk": "a[href*='/feed/'], a[href*='/picture/']",
+    "toutiao": "a[href*='/article/'], a[href*='/question/'], a[href*='/a']",
+    "xiaohongshu": "a[href*='/explore/'], a[href*='/discovery/item/']",
+}
+
+# 发布动作的候选选择器（多候选兜底）。评论/回答入口因平台而异：
+# 知乎=写回答；酷安/头条/小红书=帖子下的评论框。任一步找不到就跳过不误发。
+PLATFORM_POST_SELECTORS = {
+    "zhihu": {
+        "open": ["button:has-text('写回答')", "a:has-text('写回答')",
+                 ".QuestionHeaderActions button:has-text('回答')"],
+        "editor": [".public-DraftEditor-content", "div[contenteditable='true']", ".Editable-content"],
+        "submit": ["button:has-text('发布回答')", "button:has-text('发布')",
+                   ".AnswerAdd button:has-text('发布')"],
+    },
+    "coolapk": {
+        "open": ["textarea", "div[contenteditable='true']", "input[placeholder*='评论']",
+                 "button:has-text('说点什么')"],
+        "editor": ["textarea", "div[contenteditable='true']"],
+        "submit": ["button:has-text('发送')", "button:has-text('评论')", "button:has-text('发布')"],
+    },
+    "toutiao": {
+        "open": ["textarea[placeholder*='评论']", "input[placeholder*='评论']",
+                 "div[contenteditable='true']", "button:has-text('写评论')"],
+        "editor": ["textarea", "div[contenteditable='true']"],
+        "submit": ["button:has-text('发布')", "button:has-text('发表')", "button:has-text('评论')"],
+    },
+    "xiaohongshu": {
+        "open": ["div:has-text('说点什么')", "div[contenteditable='true']",
+                 "input[placeholder*='评论']", "textarea[placeholder*='评论']"],
+        "editor": ["div[contenteditable='true']", "textarea", "p[contenteditable='true']"],
+        "submit": ["button:has-text('发送')", "button:has-text('发布')", "button:has-text('评论')"],
+    },
 }
 
 # ---- 频控（B1 拟人化低频：每天随机 1~3 条，发一条停 60 秒再发下一条）----

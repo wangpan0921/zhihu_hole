@@ -117,8 +117,155 @@ def search_zhihu_leads(keywords: list[str], limit: int) -> list[Lead]:
 
 SEARCHERS = {
     "zhihu": search_zhihu_leads,
-    # "toutiao": ..., "xiaohongshu": ...  待接入
+    # 酷安/头条/小红书用通用搜索器（见下方 generic_search / make_searcher）
 }
+
+
+def _abs_url(href: str, platform: str) -> str:
+    if href.startswith("//"):
+        return "https:" + href
+    if href.startswith("/"):
+        base = config.PLATFORM_HOME.get(platform, "/").rstrip("/")
+        return base + href
+    return href
+
+
+def generic_search_leads(platform: str, keywords: list[str], limit: int) -> list[Lead]:
+    """通用搜索器：持久化 profile + 拟人化，按平台配置的 URL/选择器抓线索。
+
+    用于酷安/头条/小红书。选择器在 config.PLATFORM_LINK_SELECTOR，随改版需本机核对。
+    """
+    from .common import humanized_browser as hb
+
+    profile = config.PLATFORM_PROFILE[platform]
+    home = config.PLATFORM_HOME[platform]
+    tmpl = config.SEARCH_TARGETS[platform]["search_url"]
+    link_sel = config.PLATFORM_LINK_SELECTOR[platform]
+    login_cookies = set(config.PLATFORM_LOGIN_COOKIES.get(platform, []))
+
+    leads: list[Lead] = []
+    skipped = 0
+    with hb.persistent_context(profile, headless=False) as ctx:
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        page.goto(home, wait_until="domcontentloaded", timeout=40000)
+        hb.human_pause(2, 4)
+        if login_cookies and not any(c.get("name") in login_cookies for c in ctx.cookies()):
+            raise RuntimeError(
+                f"{platform} 未登录（持久化 profile 内无登录态）。先在本机扫码：\n"
+                f"  python -m fc_promotion.login_cli {platform}"
+            )
+        for kw in keywords:
+            if len(leads) >= limit:
+                break
+            page.goto(tmpl.format(kw=kw), wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            hb.human_scroll(page, times=random.randint(2, 4))
+            anchors = page.locator(link_sel)
+            count = min(anchors.count(), 15)
+            for i in range(count):
+                if len(leads) >= limit:
+                    break
+                try:
+                    a = anchors.nth(i)
+                    href = a.get_attribute("href") or ""
+                    title = (a.inner_text() or "").strip()
+                    if not href or not title:
+                        continue
+                    url = _abs_url(href, platform)
+                    if any(l.url == url for l in leads):
+                        continue
+                    if not is_android_relevant(title):
+                        skipped += 1
+                        log.info("[%s] 跳过非安卓线索：%s", platform, title[:40])
+                        continue
+                    leads.append(Lead(platform=platform, title=title, url=url))
+                except Exception:  # noqa: BLE001
+                    continue
+    log.info("[%s] 收集到 %d 条安卓相关线索（过滤掉 %d 条非安卓）", platform, len(leads), skipped)
+    return leads
+
+
+def generic_post_comment(platform: str, lead: Lead) -> bool:
+    """通用发布器：持久化 profile + 拟人化，在帖子下发评论。
+
+    用于酷安/头条/小红书。选择器在 config.PLATFORM_POST_SELECTORS，多候选兜底，
+    任一环节找不到即返回 False（不误发）。首次务必本机 headful 盯一遍确认选择器。
+    """
+    from .common import humanized_browser as hb
+
+    profile = config.PLATFORM_PROFILE[platform]
+    sels = config.PLATFORM_POST_SELECTORS[platform]
+    login_cookies = set(config.PLATFORM_LOGIN_COOKIES.get(platform, []))
+    text = lead.comment
+
+    def _find(page, candidates):
+        for sel in candidates:
+            loc = page.locator(sel).first
+            try:
+                if loc.count() > 0:
+                    return loc
+            except Exception:  # noqa: BLE001
+                continue
+        return None
+
+    try:
+        with hb.persistent_context(profile, headless=False) as ctx:
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            page.goto(config.PLATFORM_HOME[platform], wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            if login_cookies and not any(c.get("name") in login_cookies for c in ctx.cookies()):
+                log.error("[%s] 未登录，无法发布。先 python -m fc_promotion.login_cli %s", platform, platform)
+                return False
+            page.goto(lead.url, wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            hb.human_scroll(page, times=random.randint(2, 4))
+
+            opener = _find(page, sels["open"])
+            if opener is None:
+                log.error("[%s] 未找到评论/回答入口，跳过：%s", platform, lead.url)
+                return False
+            try:
+                opener.click()
+            except Exception:  # noqa: BLE001
+                pass
+            hb.human_pause(1.5, 3)
+
+            editor = _find(page, sels["editor"])
+            if editor is None:
+                log.error("[%s] 未找到编辑器，跳过：%s", platform, lead.url)
+                return False
+            hb.human_type(page, editor, text)
+            hb.human_pause(1.5, 3)
+
+            submit = _find(page, sels["submit"])
+            if submit is None:
+                log.error("[%s] 未找到发送按钮，跳过（内容未提交）：%s", platform, lead.url)
+                return False
+            submit.click()
+            hb.human_pause(2, 4)
+            log.info("[%s] 已提交评论：%s", platform, lead.url)
+            return True
+    except Exception as exc:  # noqa: BLE001
+        log.error("[%s] 发布失败：%s", platform, exc)
+        return False
+
+
+def _make_generic_searcher(platform: str):
+    def _s(keywords: list[str], limit: int) -> list[Lead]:
+        return generic_search_leads(platform, keywords, limit)
+    return _s
+
+
+# 注册通用平台（酷安/头条/小红书）
+for _p in ("coolapk", "toutiao", "xiaohongshu"):
+    SEARCHERS[_p] = _make_generic_searcher(_p)
+
+
+def post_for_platform(platform: str, lead: Lead) -> bool:
+    """按平台分派发布：知乎用专用实现，其余用通用实现。"""
+    if platform == "zhihu":
+        return post_comment_zhihu(lead)
+    return generic_post_comment(platform, lead)
 
 
 def write_to_feishu(leads: list[Lead]) -> None:
@@ -245,7 +392,7 @@ def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[L
             if posted >= quota:
                 lead.status = "未安排（超出今日配额）"
                 continue
-            ok = post_comment_zhihu(lead) if platform == "zhihu" else False
+            ok = post_for_platform(platform, lead)
             lead.status = "已发布" if ok else "发布失败/待人工"
             posted += 1
             if posted < quota:

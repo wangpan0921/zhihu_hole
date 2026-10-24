@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .base import PlatformLogin
+from .coolapk import CoolapkLogin
 from .toutiao import ToutiaoLogin
 from .wechat import WechatLogin
 from .xiaohongshu import XiaohongshuLogin
@@ -9,9 +10,10 @@ from .zhihu import ZhihuLogin
 
 LOGIN_REGISTRY: dict[str, type[PlatformLogin]] = {
     ZhihuLogin.name: ZhihuLogin,
-    WechatLogin.name: WechatLogin,
+    CoolapkLogin.name: CoolapkLogin,
     ToutiaoLogin.name: ToutiaoLogin,
     XiaohongshuLogin.name: XiaohongshuLogin,
+    WechatLogin.name: WechatLogin,
 }
 
 

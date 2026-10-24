@@ -1,23 +1,12 @@
-"""小红书登录器（预留）。
+"""小红书登录器（持久化 profile）。
 
-小红书网页端扫码登录。接入时在本机 headful 跑一次、确认登录成功特征后完善。
-注意：小红书风控较严，自动化操作务必低频，优先用于"收集线索 + 人工回复"。
+风控最严，自动化务必低频。登录判定 cookie 见
+config.PLATFORM_LOGIN_COOKIES['xiaohongshu']；首次本机 headful 扫码。
 """
 from __future__ import annotations
 
-from playwright.sync_api import BrowserContext, Page
-
-from .base import PlatformLogin
+from .persistent_base import PersistentProfileLogin
 
 
-class XiaohongshuLogin(PlatformLogin):
+class XiaohongshuLogin(PersistentProfileLogin):
     name = "xiaohongshu"
-    storage_filename = "xiaohongshu_state.json"
-
-    @property
-    def login_url(self) -> str:
-        return "https://www.xiaohongshu.com/explore"
-
-    def is_logged_in(self, page: Page, context: BrowserContext) -> bool:
-        # 登录后 web_session cookie 存在。TODO: 本机实测后收紧判定。
-        return any(c.get("name") in {"web_session", "customerClientId"} for c in context.cookies())
