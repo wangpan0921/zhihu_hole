@@ -16,10 +16,10 @@ SELLING_POINTS = [
 # ---- 下载 / 邀请 ----
 # 仅安卓；鸿蒙(HarmonyOS)不支持。
 DOWNLOAD_WEB = "https://money-3jg.pages.dev/apps/floating-clock/"  # 安卓下载页
-INVITE_CODE = "MHT-RRUHXOEPWQ"  # 复制邀请文案后打开 App 会自动填，享 14 天试用
+INVITE_CODE = "MHT-35FITT4IE4"  # 复制邀请文案后打开 App 会自动填，享 14 天试用
 # 用户提供的标准邀请文案（复制即用，App 会自动识别邀请码）
 INVITE_TEXT = (
-    "【icey悬浮时钟邀请】邀请码 MHT-RRUHXOEPWQ，复制这段话后打开 App 会自动填写，"
+    "【icey悬浮时钟邀请】邀请码 MHT-35FITT4IE4，复制这段话后打开 App 会自动填写，"
     "可享 14 天试用。下载：https://money-3jg.pages.dev/apps/floating-clock/"
 )
 # 百度网盘作为备用下载渠道（可选，站外平台慎用网盘链接）
