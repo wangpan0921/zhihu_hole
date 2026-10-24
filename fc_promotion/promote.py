@@ -328,6 +328,20 @@ def post_comment_zhihu(lead: Lead) -> bool:
                 return False
             hb.human_scroll(page, times=random.randint(2, 4))
 
+            # 0) 已回答过的问题：只会显示"我的回答/编辑回答"，没有"写回答"，直接跳过换下一条
+            has_write = any(
+                page.locator(s).first.count() > 0
+                for s in ("button:has-text('写回答')", "a:has-text('写回答')")
+            )
+            answered = any(
+                page.locator(s).first.count() > 0
+                for s in ("a:has-text('我的回答')", "button:has-text('编辑回答')",
+                          "button:has-text('编辑我的回答')", "button:has-text('继续编辑')")
+            )
+            if not has_write and answered:
+                log.info("该问题已回答过，跳过换下一条：%s", qurl)
+                return False
+
             # 1) 点"写回答"
             write_btn = None
             for sel in ("button:has-text('写回答')", "a:has-text('写回答')", ".QuestionHeaderActions button:has-text('回答')"):
@@ -336,7 +350,7 @@ def post_comment_zhihu(lead: Lead) -> bool:
                     write_btn = loc
                     break
             if write_btn is None:
-                log.error("未找到'写回答'入口（可能未登录或页面改版），跳过：%s", qurl)
+                log.error("未找到'写回答'入口（可能已回答/未登录/页面改版），跳过：%s", qurl)
                 return False
             write_btn.click()
             hb.human_pause(1.5, 3)
@@ -378,25 +392,34 @@ def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[L
     if searcher is None:
         raise SystemExit(f"平台 {platform} 的搜索器尚未接入；已接入：{list(SEARCHERS)}")
 
-    leads = searcher(config.SEARCH_KEYWORDS, max_leads)
+    # 发布模式下多抓候选线索（需要备选来跳过已回答的问题）；dry-run 用 max_leads。
+    fetch_n = max_leads if not post else max(max_leads, config.CANDIDATE_POOL)
+    leads = searcher(config.SEARCH_KEYWORDS, fetch_n)
     for lead in leads:
         lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
 
     if post:
-        # B1：本次运行随机发 1~3 条，发一条停 60 秒再发下一条
+        # B1：本次运行随机发 1~3 条，发一条停 60 秒再发下一条。
+        # 只有"成功发布"才计入配额；遇到已回答/失败则换下一条继续尝试，直到满配额或线索用尽。
         quota = random.randint(config.DAILY_MIN_COMMENTS, config.DAILY_MAX_COMMENTS)
-        quota = min(quota, max_leads, len(leads))
-        log.info("本次计划发布 %d 条（每天随机 1~3，间隔 %d 秒）", quota, config.MIN_SECONDS_BETWEEN)
+        quota = min(quota, max_leads)
+        log.info("本次计划发布 %d 条（每天随机 1~3，间隔 %d 秒）；候选线索 %d 条",
+                 quota, config.MIN_SECONDS_BETWEEN, len(leads))
         posted = 0
         for lead in leads:
             if posted >= quota:
-                lead.status = "未安排（超出今日配额）"
+                lead.status = "未安排（已达今日配额）"
                 continue
             ok = post_for_platform(platform, lead)
-            lead.status = "已发布" if ok else "发布失败/待人工"
-            posted += 1
-            if posted < quota:
-                time.sleep(config.MIN_SECONDS_BETWEEN)
+            if ok:
+                lead.status = "已发布"
+                posted += 1
+                if posted < quota:
+                    time.sleep(config.MIN_SECONDS_BETWEEN)
+            else:
+                lead.status = "跳过（已回答/失败）"
+        if posted < quota:
+            log.warning("仅发布 %d/%d 条：候选线索不足或多为已回答问题，建议扩充关键词", posted, quota)
     else:
         for lead in leads:
             lead.status = "待人工发布（dry-run）"

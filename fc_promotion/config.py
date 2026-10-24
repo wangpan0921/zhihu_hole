@@ -159,6 +159,8 @@ DAILY_MAX_COMMENTS = 3          # 每天最多发布条数（每次运行在 [mi
 MIN_SECONDS_BETWEEN = 60        # 两次发布最小间隔（秒）——发一条停 1 分钟
 # 兼容旧引用：单次运行上限按每日上限算
 MAX_COMMENTS_PER_RUN = DAILY_MAX_COMMENTS
+# 发布模式下抓取的候选线索池大小（需多于每日配额，以便跳过已回答的问题后仍有备选）
+CANDIDATE_POOL = 20
 
 # ---- 知乎持久化浏览器 profile 名（绕过 40362 风控的关键）----
 ZHIHU_PROFILE = "zhihu"
