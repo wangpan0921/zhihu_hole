@@ -1,0 +1,35 @@
+sources:
+  - id: yicai
+    name: 第一财经
+    kind: html_list
+    url: https://www.yicai.com/news/
+    link_pattern: 'https://www\.yicai\.com/news/\d+\.html'
+    focus: 财经新闻、产业变化、公司经营与消费趋势
+    enabled: true
+  - id: tmtpost
+    name: 钛媒体
+    kind: rss
+    url: https://www.tmtpost.com/rss.xml
+    focus: 科技、产业和商业模式
+    enabled: true
+  - id: stats
+    name: 国家统计局
+    kind: html_list
+    url: https://www.stats.gov.cn/sj/zxfb/
+    link_pattern: 'https://www\.stats\.gov\.cn/sj/zxfb/\d+/t\d+_\d+\.html'
+    focus: 价格、PMI、工业利润和宏观经济数据
+    enabled: true
+  - id: pbc
+    name: 中国人民银行
+    kind: html_list
+    url: https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/index.html
+    link_pattern: 'https://www\.pbc\.gov\.cn/goutongjiaoliu/113456/113469/\d+/index\.html'
+    focus: 货币政策、金融条件和企业融资环境
+    enabled: true
+  - id: iresearch
+    name: 艾瑞咨询报告
+    kind: html_list
+    url: https://report.iresearch.cn/
+    link_pattern: 'https://report\.iresearch\.cn/report/\d+/\d+\.shtml'
+    focus: 消费、互联网、产业和数字化行业报告
+    enabled: true

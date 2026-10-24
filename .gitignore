@@ -27,15 +27,25 @@ data/books/
 data/wechat_album/
 logs/
 **/*.zhihu.images.json
+**/*.meta.json
+**/*.wechat.json
 kid_coding/**/images/
+kid_coding/**/video/
+scripts/*.js
+tests/*
 
 # 调试截图
 debug/
 *.png
-!docs/*.png
 
 # 构建/运行产物
 artifacts/
 
 # 少儿编程课程目录里生成的视频（产物，不入库）
 kid_coding/**/*.mp4
+
+# 这个目录下的内容是 PyTorch 训练效率实验的内容，已有单独仓库上传保存
+pytorch_training_efficiency/labs/*
+
+# 这个目录下的内容是 MBA 圈子的文章，已经发布到知乎
+mba/archive/
