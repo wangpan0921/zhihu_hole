@@ -16,10 +16,10 @@ SELLING_POINTS = [
 # ---- 下载 / 邀请 ----
 # 仅安卓；鸿蒙(HarmonyOS)不支持。
 DOWNLOAD_WEB = "https://money-3jg.pages.dev/apps/floating-clock/"  # 安卓下载页
-INVITE_CODE = "MHT-RRUHXOEPWQ"  # 复制邀请文案后打开 App 会自动填，享 14 天试用
+INVITE_CODE = "MHT-35FITT4IE4"  # 复制邀请文案后打开 App 会自动填，享 14 天试用
 # 用户提供的标准邀请文案（复制即用，App 会自动识别邀请码）
 INVITE_TEXT = (
-    "【icey悬浮时钟邀请】邀请码 MHT-RRUHXOEPWQ，复制这段话后打开 App 会自动填写，"
+    "【icey悬浮时钟邀请】邀请码 MHT-35FITT4IE4，复制这段话后打开 App 会自动填写，"
     "可享 14 天试用。下载：https://money-3jg.pages.dev/apps/floating-clock/"
 )
 # 百度网盘作为备用下载渠道（可选，站外平台慎用网盘链接）
@@ -159,6 +159,8 @@ DAILY_MAX_COMMENTS = 3          # 每天最多发布条数（每次运行在 [mi
 MIN_SECONDS_BETWEEN = 60        # 两次发布最小间隔（秒）——发一条停 1 分钟
 # 兼容旧引用：单次运行上限按每日上限算
 MAX_COMMENTS_PER_RUN = DAILY_MAX_COMMENTS
+# 发布模式下抓取的候选线索池大小（需多于每日配额，以便跳过已回答的问题后仍有备选）
+CANDIDATE_POOL = 20
 
 # ---- 知乎持久化浏览器 profile 名（绕过 40362 风控的关键）----
 ZHIHU_PROFILE = "zhihu"
