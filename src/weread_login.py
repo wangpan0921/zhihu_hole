@@ -155,41 +155,61 @@ def login_interactive(headful: bool = False) -> Path:
 
         qr_data: str | None = None
         qr_png: bytes | None = None
-        for attempt in range(6):
-            qr_data, qr_png = _try_capture_qr(page)
-            if qr_data:
-                break
-            log.info("第 %d 次未抓到二维码，等待再试…", attempt + 1)
-            page.wait_for_timeout(2000)
 
-        if not qr_data:
-            shot = DEBUG_DIR / "weread_login_debug.png"
-            page.screenshot(path=str(shot), full_page=True)
-            browser.close()
-            raise RuntimeError(
-                f"未能从微信读书登录页解出二维码，已保存调试截图：{shot}\n"
-                f"可能是登录按钮位置变了，或二维码 selector 失效。"
-            )
+        # 微信读书的扫码二维码会每隔约 20~60 秒自动轮换，过期的旧码扫出来就是
+        # 「二维码失效」。所以这里不再「抓一次静态渲染后干等」，而是在等待扫码的
+        # 整个过程里持续重新抓取页面上的实时二维码：内容一变就重画终端二维码、
+        # 刷新 debug/weread_qr_raw.png，保证你看到/扫到的始终是当前有效的那张。
+        shot_raw = DEBUG_DIR / "weread_qr_raw.png"
+        last_qr: str | None = None
+        shown_once = False
+        no_qr_streak = 0
 
-        # 保留原始二维码图（方便实在扫不动时直接用图片查看器扫）
-        if qr_png:
-            (DEBUG_DIR / "weread_qr_raw.png").write_bytes(qr_png)
-
-        print("\n========== 请用「微信」扫描下方二维码，再在手机上点确认登录 ==========\n")
-        _print_qr_in_terminal(qr_data)
-        print("===============================================================\n")
-        print("（如果终端二维码扫描有困难，可以打开 debug/weread_qr_raw.png）\n")
-
-        log.info("等待扫码确认（最长 %d 秒）...", LOGIN_TIMEOUT_SEC)
+        log.info("等待扫码确认（最长 %d 秒），二维码会自动刷新...", LOGIN_TIMEOUT_SEC)
         deadline = time.time() + LOGIN_TIMEOUT_SEC
         logged_in = False
         while time.time() < deadline:
             if _is_logged_in(context):
                 logged_in = True
                 break
+
+            qr_data, qr_png = _try_capture_qr(page)
+            if qr_data:
+                no_qr_streak = 0
+                if qr_data != last_qr:
+                    last_qr = qr_data
+                    if qr_png:
+                        shot_raw.write_bytes(qr_png)
+                    if not shown_once:
+                        print(
+                            "\n========== 请用「微信」扫描下方二维码，再在手机上点确认登录 =========="
+                        )
+                        print("（二维码会自动刷新，始终扫终端里最新的这张；也可打开 "
+                              f"{shot_raw} 用图片查看器扫）\n")
+                        shown_once = True
+                    else:
+                        print("\n[二维码已刷新，请扫下面这张最新的]\n")
+                    _print_qr_in_terminal(qr_data)
+                    print(
+                        "===============================================================\n"
+                    )
+            else:
+                # 偶发没抓到（刷新间隙）不立刻报错，连续多次才判定失败
+                no_qr_streak += 1
+                if no_qr_streak == 1 and not shown_once:
+                    shot = DEBUG_DIR / "weread_login_debug.png"
+                    page.screenshot(path=str(shot), full_page=True)
+                    log.info("暂未抓到二维码，已存调试截图 %s，继续重试…", shot)
+
             page.wait_for_timeout(2000)
 
         if not logged_in:
+            if not shown_once:
+                browser.close()
+                raise RuntimeError(
+                    "始终未能从微信读书登录页解出二维码（可能登录按钮/selector 变了），"
+                    f"调试截图见 {DEBUG_DIR}/weread_login_debug.png"
+                )
             browser.close()
             raise TimeoutError("扫码超时未登录")
 
