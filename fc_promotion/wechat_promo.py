@@ -36,14 +36,14 @@ def build_article_markdown() -> tuple[str, str]:
         "给安卓手机加一个**带秒的悬浮时钟**就能解决：时间浮在所有应用最上层，"
         "一眼就能看到，还精确到秒。\n\n"
         f"## 它有什么好\n\n{points}\n\n"
-        "## 实际使用和设置\n\n"
-        "桌面、阅读和设置页的效果如下：\n\n"
-        f"{copywriter.image_markdown()}\n\n"
         "## 怎么用\n\n"
         "装上后开启悬浮开关即可；位置能拖、能锁定（锁定后触摸穿透，不挡你操作），"
         "字号/颜色/透明度都能调。\n\n"
         "## 下载与试用\n\n"
-        f"{copywriter._invite_text()}\n"
+        f"{copywriter._invite_text()}\n\n"
+        "## 实际使用和设置\n\n"
+        "桌面、阅读和设置页的效果如下：\n\n"
+        f"{copywriter.image_markdown()}\n"
     )
     return TITLE, body
 

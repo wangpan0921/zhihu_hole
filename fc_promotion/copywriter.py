@@ -58,12 +58,14 @@ def generate_comment(*, question_title: str = "", platform: str = "zhihu") -> st
 
 
 def generate_article_snippet() -> str:
-    """生成一段可用于公众号/文章的较长推广文案，末尾原样附标准邀请文本。"""
+    """生成一段可用于公众号/文章的较长推广文案。
+
+    邀请文本保持原样，三张图片紧随其后并作为全文结尾。
+    """
     points = "\n".join(f"- {p}" for p in config.SELLING_POINTS)
     promo = (
         f"【icey悬浮时钟】一个浮在所有安卓应用之上的带秒数字时钟，"
         f"适合看直播、打游戏、上网课、盯考试倒计时的人：\n{points}\n\n"
-        "下面是实际使用和设置界面：\n\n"
-        f"{image_markdown()}"
+        "下面是实际使用和设置界面："
     )
-    return f"{promo}\n\n{_invite_text()}"
+    return f"{promo}\n\n{_invite_text()}\n\n{image_markdown()}"
