@@ -34,9 +34,10 @@ fc_promotion/
       zhihu.py coolapk.py toutiao.py xiaohongshu.py wechat.py
       registry.py          # 平台登录器注册表
   config.py                # 卖点/下载邀请/飞书表/各平台搜索URL与选择器/频控
-  copywriter.py            # 推广文案（卖点在前 + 原样邀请文本在后）
+  copywriter.py            # 推广文案（卖点在前 + 图片块 + 原样邀请文本在后）
   promote.py               # 搜索→生成文案→发布→写飞书（知乎专用 + 通用实现）
   wechat_promo.py          # 公众号推广软文 → 存草稿
+  assets/                  # 三张产品截图（桌面/阅读/设置页）
   login_cli.py             # python -m fc_promotion.login_cli <platform>
 ```
 
@@ -62,6 +63,9 @@ PYTHONPATH=. python -m fc_promotion.promote --platform coolapk --post
 PYTHONPATH=. python -m fc_promotion.wechat_promo --dry-run    # 只看 markdown
 PYTHONPATH=. python -m fc_promotion.wechat_promo             # 存草稿（需登录公众号）
 ```
+
+公众号软文会自动插入 `assets/` 下的三张产品截图，并将桌面悬浮图作为草稿封面。
+知乎、酷安、头条和小红书的评论入口当前按纯文字发送，不会把本地路径误发给用户。
 
 ## 新平台首次接入须本机核对选择器
 

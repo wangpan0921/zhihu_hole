@@ -18,6 +18,17 @@ def _invite_text() -> str:
     return config.INVITE_TEXT
 
 
+def image_markdown() -> str:
+    """返回图文推广素材的 Markdown 图片块。
+
+    评论渠道只发送纯文字；公众号等支持图文的渠道可直接复用此块，
+    发布器会把本地图片上传后替换为平台 CDN 地址。
+    """
+    return "\n\n".join(
+        f"![{alt}]({ref})" for alt, ref in config.PROMO_IMAGE_REFS
+    )
+
+
 def generate_comment(*, question_title: str = "", platform: str = "zhihu") -> str:
     """生成一条推广评论：前面是随机组合的推广文案，最后原样附上标准邀请文本。
 
@@ -51,6 +62,8 @@ def generate_article_snippet() -> str:
     points = "\n".join(f"- {p}" for p in config.SELLING_POINTS)
     promo = (
         f"【icey悬浮时钟】一个浮在所有安卓应用之上的带秒数字时钟，"
-        f"适合看直播、打游戏、上网课、盯考试倒计时的人：\n{points}"
+        f"适合看直播、打游戏、上网课、盯考试倒计时的人：\n{points}\n\n"
+        "下面是实际使用和设置界面：\n\n"
+        f"{image_markdown()}"
     )
     return f"{promo}\n\n{_invite_text()}"

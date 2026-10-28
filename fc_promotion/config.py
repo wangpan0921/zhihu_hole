@@ -1,8 +1,18 @@
 """悬浮时钟推广的集中配置：产品卖点、下载渠道、飞书目标表、各平台搜索入口。"""
 from __future__ import annotations
 
+from pathlib import Path
+
 # ---- 产品 ----
 APP_NAME = "悬浮时钟"
+
+# 图文推广素材。相对引用用于 Markdown 正文，绝对目录用于公众号上传。
+PROMO_ASSET_DIR = Path(__file__).resolve().parent / "assets"
+PROMO_IMAGE_REFS = (
+    ("桌面悬浮时钟", "fc_promotion/assets/shot_home.jpg"),
+    ("微信读书内悬浮时钟", "fc_promotion/assets/shot_weread.jpg"),
+    ("悬浮时钟设置页", "fc_promotion/assets/shot_app.jpg"),
+)
 
 # 用户点名要突出的卖点（APK 体积小 / 不占空间 / 耗电低）
 SELLING_POINTS = [
