@@ -55,6 +55,10 @@ def is_android_relevant(title: str) -> bool:
     for bad in config.EXCLUDE_KEYWORDS:
         if bad.lower() in low:
             return False
+    # 主题相关性：必须命中"悬浮/带秒/看时间"等真实需求词，否则是答非所问的泛问题（剔除）
+    if getattr(config, "REQUIRE_TOPIC", False):
+        if not any(t.lower() in low for t in config.TOPIC_KEYWORDS):
+            return False
     if config.REQUIRE_ANDROID_HINT:
         return any(hint.lower() in low for hint in config.ANDROID_HINT_KEYWORDS)
     return True
