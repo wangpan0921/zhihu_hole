@@ -10,3 +10,8 @@ from .persistent_base import PersistentProfileLogin
 
 class CoolapkLogin(PersistentProfileLogin):
     name = "coolapk"
+
+    @property
+    def login_url(self) -> str:
+        """酷安首页没有网页版登录入口，直接打开账号登录页。"""
+        return "https://account.coolapk.com/auth/login"
