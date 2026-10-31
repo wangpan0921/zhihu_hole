@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 import random
+import re
 import sys
 import time
 from dataclasses import dataclass, field
@@ -29,6 +31,11 @@ from .common.logging_utils import get_logger
 from .common.login import get_login
 
 log = get_logger("promote")
+
+
+def _headless_mode() -> bool:
+    """仅在明确设置时启用无头模式，默认保留已验证的有头流程。"""
+    return os.getenv("FC_PROMOTION_HEADLESS", "").lower() in {"1", "true", "yes"}
 
 
 @dataclass
@@ -75,7 +82,7 @@ def search_zhihu_leads(keywords: list[str], limit: int) -> list[Lead]:
     leads: list[Lead] = []
     skipped = 0
     tmpl = config.SEARCH_TARGETS["zhihu"]["search_url"]
-    with hb.persistent_context(config.ZHIHU_PROFILE, headless=False) as ctx:
+    with hb.persistent_context(config.ZHIHU_PROFILE, headless=_headless_mode()) as ctx:
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
         # 先过首页，拿到正常会话再搜，降低风控
         page.goto("https://www.zhihu.com/", wait_until="domcontentloaded", timeout=40000)
@@ -305,6 +312,44 @@ def write_to_feishu(leads: list[Lead]) -> None:
             log.error("写入飞书失败：%s | %s", exc, lead.title[:30])
 
 
+def _upload_zhihu_images(page, editor) -> None:
+    """把文案中的三张本地图片逐张上传到知乎编辑器。
+
+    知乎不会解析 Markdown 本地路径；set_input_files 后需等待图片节点
+    从 blob URL 变成知乎图片 CDN URL，才能继续发布。
+    """
+    from pathlib import Path
+
+    image_input = page.locator("input[type='file'][accept*='image']").first
+    if image_input.count() == 0:
+        raise RuntimeError("知乎回答编辑器中未找到图片上传 input")
+    for _, ref in config.PROMO_IMAGE_REFS:
+        path = config.PROMO_ASSET_DIR / Path(ref).name
+        if not path.exists():
+            raise FileNotFoundError(f"知乎推广图片不存在：{path}")
+        remote = False
+        for attempt in range(1, 4):
+            before = editor.locator("img").count()
+            image_input.set_input_files(str(path), timeout=15000)
+            deadline = time.time() + 30
+            while time.time() < deadline:
+                images = editor.locator("img")
+                for index in range(before, images.count()):
+                    src = images.nth(index).get_attribute("src") or ""
+                    if src.startswith(("https://", "http://")) and "zhimg.com" in src:
+                        remote = True
+                        break
+                if remote:
+                    break
+                page.wait_for_timeout(500)
+            if remote:
+                break
+            log.warning("知乎图片上传等待超时，准备重试(%d/3)：%s", attempt, path.name)
+        if not remote:
+            raise RuntimeError(f"知乎图片上传未完成：{path.name}")
+        log.info("知乎推广图片已上传：%s", path.name)
+
+
 def post_comment_zhihu(lead: Lead) -> bool:
     """用持久化 profile（拟人化）在知乎问题下写一条简短回答并发布。
 
@@ -315,7 +360,7 @@ def post_comment_zhihu(lead: Lead) -> bool:
 
     text = lead.comment
     try:
-        with hb.persistent_context(config.ZHIHU_PROFILE, headless=False) as ctx:
+        with hb.persistent_context(config.ZHIHU_PROFILE, headless=_headless_mode()) as ctx:
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
             page.goto("https://www.zhihu.com/", wait_until="domcontentloaded", timeout=40000)
             hb.human_pause(2, 4)
@@ -369,7 +414,10 @@ def post_comment_zhihu(lead: Lead) -> bool:
             if editor is None:
                 log.error("未找到回答编辑器，跳过：%s", qurl)
                 return False
-            hb.human_type(page, editor, text)
+            # Markdown 图片引用仅用于飞书记录；知乎编辑器必须通过文件 input 上传。
+            text_only = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text).strip()
+            hb.human_type(page, editor, text_only)
+            _upload_zhihu_images(page, editor)
             hb.human_pause(1.5, 3)
 
             # 3) 点"发布回答"
