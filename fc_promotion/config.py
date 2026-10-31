@@ -32,6 +32,8 @@ INVITE_TEXT = (
     "【icey悬浮时钟邀请】邀请码 MHT-35FITT4IE4，复制这段话后打开 App 会自动填写，"
     "可享 14 天试用。下载：https://money-3jg.pages.dev/apps/floating-clock/"
 )
+# 邀请文本之后的固定提醒，不能插入邀请文本内部或图片之后。
+KEEP_ALIVE_REMINDER = "强烈建议开启保活设置，防止被系统杀掉。"
 # 百度网盘作为备用下载渠道（可选，站外平台慎用网盘链接）
 DOWNLOAD_BAIDU = "https://pan.baidu.com/s/1fo7CZ43Wfk99axTpFLXB1A?pwd=83jc"  # 提取码 83jc
 DOWNLOAD_BAIDU_CODE = "83jc"

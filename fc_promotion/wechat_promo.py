@@ -41,6 +41,7 @@ def build_article_markdown() -> tuple[str, str]:
         "字号/颜色/透明度都能调。\n\n"
         "## 下载与试用\n\n"
         f"{copywriter._invite_text()}\n\n"
+        f"{config.KEEP_ALIVE_REMINDER}\n\n"
         "## 实际使用和设置\n\n"
         "桌面、阅读和设置页的效果如下：\n\n"
         f"{copywriter.image_markdown()}\n"

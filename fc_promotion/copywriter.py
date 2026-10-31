@@ -30,9 +30,10 @@ def image_markdown() -> str:
 
 
 def generate_comment(*, question_title: str = "", platform: str = "zhihu") -> str:
-    """生成一条推广评论：前面是随机组合的推广文案，最后原样附上标准邀请文本。
+    """生成一条推广文案。
 
-    突出体积小 / 不占空间 / 耗电低，口吻自然，像真人安利。
+    知乎文案的顺序固定为：推广段、原样邀请文本、保活提醒、三张产品图。
+    其他平台仍只输出文字，避免把本地图片路径发送到不支持图文的评论入口。
     """
     openers = [
         "我一直在用一个叫「icey悬浮时钟」的小工具，正好对口。",
@@ -53,8 +54,11 @@ def generate_comment(*, question_title: str = "", platform: str = "zhihu") -> st
         ]
     )
     promo = f"{random.choice(openers)}{core}{extra}"
-    # 推广文案在前，邀请文本原样在后
-    return f"{promo}\n\n{_invite_text()}"
+    # 邀请文本保持原样；知乎的图片引用放在保活提醒之后，作为全文结尾。
+    result = f"{promo}\n\n{_invite_text()}"
+    if platform == "zhihu":
+        result += f"\n\n{config.KEEP_ALIVE_REMINDER}\n\n{image_markdown()}"
+    return result
 
 
 def generate_article_snippet() -> str:
@@ -68,4 +72,7 @@ def generate_article_snippet() -> str:
         f"适合看直播、打游戏、上网课、盯考试倒计时的人：\n{points}\n\n"
         "下面是实际使用和设置界面："
     )
-    return f"{promo}\n\n{_invite_text()}\n\n{image_markdown()}"
+    return (
+        f"{promo}\n\n{_invite_text()}\n\n"
+        f"{config.KEEP_ALIVE_REMINDER}\n\n{image_markdown()}"
+    )
