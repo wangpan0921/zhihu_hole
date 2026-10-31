@@ -10,14 +10,17 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import random
 import time
 from pathlib import Path
 from typing import Iterator
 
-from playwright.sync_api import BrowserContext, Page, sync_playwright
+from playwright.sync_api import BrowserContext, Error, Page, sync_playwright
 
 from .paths import AUTH_DIR
+
+log = logging.getLogger(__name__)
 
 _UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -31,6 +34,49 @@ _STEALTH_JS = (
     "Object.defineProperty(navigator,'languages',{get:()=>['zh-CN','zh']});"
     "Object.defineProperty(navigator,'plugins',{get:()=>[1,2,3,4,5]});"
 )
+
+_BROWSER_NOT_FOUND_MARKERS = (
+    "executable doesn't exist",
+    "distribution 'chrome' is not found",
+    "looks like playwright was just installed or updated",
+)
+
+_CHROME_LAUNCH_FAILURE_MARKERS = (
+    "target page, context or browser has been closed",
+)
+
+
+def _browser_not_found(error: Error) -> bool:
+    message = str(error).lower()
+    return any(marker in message for marker in _BROWSER_NOT_FOUND_MARKERS)
+
+
+def _chrome_unavailable(error: Error) -> bool:
+    message = str(error).lower()
+    return _browser_not_found(error) or any(
+        marker in message for marker in _CHROME_LAUNCH_FAILURE_MARKERS
+    )
+
+
+def _launch_persistent_context(browser_type, **kwargs) -> BrowserContext:
+    """优先系统 Chrome，缺失时回退 Playwright Chromium。"""
+    try:
+        return browser_type.launch_persistent_context(channel="chrome", **kwargs)
+    except Error as chrome_error:
+        if not _chrome_unavailable(chrome_error):
+            raise
+        reason = str(chrome_error).splitlines()[0]
+        log.warning("系统 Chrome 不可用，回退到 Playwright Chromium：%s", reason)
+
+    try:
+        return browser_type.launch_persistent_context(**kwargs)
+    except Error as chromium_error:
+        if not _browser_not_found(chromium_error):
+            raise
+        raise RuntimeError(
+            "系统 Chrome 不可用，且 Playwright Chromium 也未安装。"
+            "请运行：python -m playwright install chromium"
+        ) from chromium_error
 
 
 def profile_dir(name: str) -> Path:
@@ -49,7 +95,8 @@ def persistent_context(
 ) -> Iterator[BrowserContext]:
     """打开一个持久化、带反自动化指纹的浏览器上下文。headful 更接近真人。"""
     with sync_playwright() as p:
-        ctx = p.chromium.launch_persistent_context(
+        ctx = _launch_persistent_context(
+            p.chromium,
             user_data_dir=str(profile_dir(profile_name)),
             headless=headless,
             user_agent=_UA,
