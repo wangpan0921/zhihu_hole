@@ -148,6 +148,10 @@ def generic_search_leads(platform: str, keywords: list[str], limit: int) -> list
     """
     from .common import humanized_browser as hb
 
+    unavailable = config.PLATFORM_SEARCH_UNAVAILABLE.get(platform)
+    if unavailable:
+        raise RuntimeError(unavailable)
+
     profile = config.PLATFORM_PROFILE[platform]
     home = config.PLATFORM_HOME[platform]
     tmpl = config.SEARCH_TARGETS[platform]["search_url"]
@@ -501,7 +505,13 @@ def main(argv: list[str] | None = None) -> int:
     to_feishu = not (args.dry_run or args.no_feishu)
     post = args.post and not args.dry_run
 
-    leads = run(args.platform, max_leads=args.max, post=post, to_feishu=to_feishu)
+    try:
+        leads = run(args.platform, max_leads=args.max, post=post, to_feishu=to_feishu)
+    except RuntimeError as exc:
+        # 平台入口失效、未登录等可预期运行错误不应打印整段 traceback；把可操作原因直接交给用户。
+        log.error("%s", exc)
+        print(f"错误：{exc}", file=sys.stderr)
+        return 2
 
     print(f"\n==== 共 {len(leads)} 条推广线索（platform={args.platform}）====")
     for i, lead in enumerate(leads, 1):

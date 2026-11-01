@@ -100,7 +100,8 @@ SEARCH_TARGETS = {
     "zhihu": {
         "search_url": "https://www.zhihu.com/search?type=content&q={kw}",
     },
-    # 酷安：安卓工具垂直社区，图文广场搜索；对第三方下载链接容忍度高
+    # 酷安：旧网页搜索路由已失效（返回 {"message":"/s not found.","code":404）。
+    # 保留 URL 作为历史记录，但由 promote.py 在运行前明确提示不可用，避免静默得到 0 条结果。
     "coolapk": {
         "search_url": "https://www.coolapk.com/s?q={kw}&type=feed",
     },
@@ -112,6 +113,14 @@ SEARCH_TARGETS = {
     "xiaohongshu": {
         "search_url": "https://www.xiaohongshu.com/search_result?keyword={kw}",
     },
+}
+
+# 酷安当前没有可用的网页关键词搜索入口。不要把失效入口的 404 当作“没有线索”。
+PLATFORM_SEARCH_UNAVAILABLE = {
+    "coolapk": (
+        "酷安网页端关键词搜索入口已失效（/s 返回 404），当前无法通过网页自动搜索。"
+        "请改用酷安 App 手动搜索，或暂时使用其他已接入平台。"
+    ),
 }
 
 # ---- 各平台登录态/浏览器 profile 与登录判定 cookie ----

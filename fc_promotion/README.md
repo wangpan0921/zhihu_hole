@@ -4,7 +4,8 @@
 
 **平台现状**：
 - 知乎 ✅ 搜问题→写回答（已实测真发通过，持久化 profile 绕 40362 风控）
-- 酷安 / 头条号 / 小红书 ⏳ 搜帖→评论（已接入通用搜索/发布框架，选择器需首次本机实测核对）
+- 酷安 ⚠️ 网页端关键词搜索入口已失效（`/s` 返回 404），当前暂停自动搜索；请用酷安 App 手动搜索，或改用其他平台
+- 头条号 / 小红书 ⏳ 搜帖→评论（已接入通用搜索/发布框架，选择器需首次本机实测核对）
 - 公众号 ✅ 发自有推广软文草稿（复用项目现有发布器，强制存草稿不群发）
 
 ## 定位与边界
@@ -53,7 +54,7 @@ PYTHONPATH=. python -m fc_promotion.login_cli toutiao
 PYTHONPATH=. python -m fc_promotion.login_cli xiaohongshu
 PYTHONPATH=. python -m fc_promotion.login_cli <platform> --check   # 校验登录态
 
-# 2) 预览线索与文案（不发布、不写飞书）
+# 2) 预览线索与文案（不发布、不写飞书；酷安网页搜索暂不可用）
 PYTHONPATH=. python -m fc_promotion.promote --platform coolapk --dry-run
 
 # 3) 正式跑（本机、有登录态）；--post 才真发，默认每天随机 1~3 条
