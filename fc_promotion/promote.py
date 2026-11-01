@@ -71,7 +71,18 @@ def is_android_relevant(title: str) -> bool:
     return True
 
 
-def search_zhihu_leads(keywords: list[str], limit: int) -> list[Lead]:
+def _canonical_zhihu_question_url(href: str) -> str:
+    """把回答链接归一到问题主页，避免同一问题的多个回答重复占候选名额。"""
+    return href.split("/answer/", 1)[0].rstrip("/")
+
+
+def search_zhihu_leads(
+    keywords: list[str],
+    limit: int,
+    *,
+    exclude_urls: set[str] | None = None,
+    search_round: int = 0,
+) -> list[Lead]:
     """用持久化 profile（拟人化）打开知乎搜索页，抓取问题链接作为推广线索。
 
     用 is_android_relevant 过滤苹果版/桌面版等非安卓线索。
@@ -80,6 +91,7 @@ def search_zhihu_leads(keywords: list[str], limit: int) -> list[Lead]:
     from .common import humanized_browser as hb
 
     leads: list[Lead] = []
+    exclude_urls = {_canonical_zhihu_question_url(url) for url in (exclude_urls or set())}
     skipped = 0
     tmpl = config.SEARCH_TARGETS["zhihu"]["search_url"]
     with hb.persistent_context(config.ZHIHU_PROFILE, headless=_headless_mode()) as ctx:
@@ -92,36 +104,42 @@ def search_zhihu_leads(keywords: list[str], limit: int) -> list[Lead]:
                 "知乎未登录（持久化 profile 内无登录态）。请先在本机扫码：\n"
                 "  python -m fc_promotion.login_cli zhihu"
             )
+        scroll_rounds = min(2 + search_round, 8)
         for kw in keywords:
             if len(leads) >= limit:
                 break
             page.goto(tmpl.format(kw=kw), wait_until="domcontentloaded", timeout=40000)
             hb.human_pause(2, 4)
-            hb.human_scroll(page, times=random.randint(2, 4))
-            anchors = page.locator("a[href*='/question/']")
-            count = min(anchors.count(), 15)
-            for i in range(count):
+            for _ in range(scroll_rounds):
+                anchors = page.locator("a[href*='/question/']")
+                count = min(anchors.count(), 30)
+                for i in range(count):
+                    if len(leads) >= limit:
+                        break
+                    try:
+                        a = anchors.nth(i)
+                        href = a.get_attribute("href") or ""
+                        title = (a.inner_text() or "").strip()
+                        if not href or not title:
+                            continue
+                        if href.startswith("//"):
+                            href = "https:" + href
+                        elif href.startswith("/"):
+                            href = "https://www.zhihu.com" + href
+                        href = _canonical_zhihu_question_url(href)
+                        if href in exclude_urls or any(l.url == href for l in leads):
+                            continue
+                        if not is_android_relevant(title):
+                            skipped += 1
+                            log.info("跳过非安卓线索：%s", title[:40])
+                            continue
+                        leads.append(Lead(platform="zhihu", title=title, url=href))
+                    except Exception:  # noqa: BLE001
+                        continue
                 if len(leads) >= limit:
                     break
-                try:
-                    a = anchors.nth(i)
-                    href = a.get_attribute("href") or ""
-                    title = (a.inner_text() or "").strip()
-                    if not href or not title:
-                        continue
-                    if href.startswith("//"):
-                        href = "https:" + href
-                    elif href.startswith("/"):
-                        href = "https://www.zhihu.com" + href
-                    if any(l.url == href for l in leads):
-                        continue
-                    if not is_android_relevant(title):
-                        skipped += 1
-                        log.info("跳过非安卓线索：%s", title[:40])
-                        continue
-                    leads.append(Lead(platform="zhihu", title=title, url=href))
-                except Exception:  # noqa: BLE001
-                    continue
+                hb.human_scroll(page, times=1)
+                hb.human_pause(1, 2)
     log.info("知乎收集到 %d 条安卓相关线索（过滤掉 %d 条非安卓）", len(leads), skipped)
     return leads
 
@@ -448,37 +466,64 @@ def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[L
     if searcher is None:
         raise SystemExit(f"平台 {platform} 的搜索器尚未接入；已接入：{list(SEARCHERS)}")
 
-    # 发布模式下多抓候选线索（需要备选来跳过已回答的问题）；dry-run 用 max_leads。
-    fetch_n = max_leads if not post else max(max_leads, config.CANDIDATE_POOL)
-    leads = searcher(config.SEARCH_KEYWORDS, fetch_n)
-    for lead in leads:
-        lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
-
-    if post:
+    # dry-run 保持单次搜索；知乎发布模式在候选耗尽后会继续搜索下一轮。
+    if not post:
+        leads = searcher(config.SEARCH_KEYWORDS, max_leads)
+        for lead in leads:
+            lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
+        for lead in leads:
+            lead.status = "待人工发布（dry-run）"
+    else:
         # B1：本次运行随机发 1~3 条，发一条停 60 秒再发下一条。
         # 只有"成功发布"才计入配额；遇到已回答/失败则换下一条继续尝试，直到满配额或线索用尽。
         quota = random.randint(config.DAILY_MIN_COMMENTS, config.DAILY_MAX_COMMENTS)
         quota = min(quota, max_leads)
-        log.info("本次计划发布 %d 条（每天随机 1~3，间隔 %d 秒）；候选线索 %d 条",
-                 quota, config.MIN_SECONDS_BETWEEN, len(leads))
+        leads: list[Lead] = []
         posted = 0
-        for lead in leads:
-            if posted >= quota:
-                lead.status = "未安排（已达今日配额）"
-                continue
-            ok = post_for_platform(platform, lead)
-            if ok:
-                lead.status = "已发布"
-                posted += 1
-                if posted < quota:
-                    time.sleep(config.MIN_SECONDS_BETWEEN)
+        search_round = 0
+        attempted_urls: set[str] = set()
+        log.info(
+            "本次计划发布 %d 条（每天随机 1~3，间隔 %d 秒）；知乎最多搜索 %d 轮",
+            quota,
+            config.MIN_SECONDS_BETWEEN,
+            config.MAX_ZHIHU_SEARCH_ROUNDS if platform == "zhihu" else 1,
+        )
+        while posted < quota:
+            if platform == "zhihu":
+                batch = search_zhihu_leads(
+                    config.SEARCH_KEYWORDS,
+                    max(config.CANDIDATE_POOL, quota * 2),
+                    exclude_urls=attempted_urls,
+                    search_round=search_round,
+                )
             else:
-                lead.status = "跳过（已回答/失败）"
+                if search_round > 0:
+                    break
+                batch = searcher(config.SEARCH_KEYWORDS, max(config.CANDIDATE_POOL, quota * 2))
+            if not batch:
+                break
+            search_round += 1
+            for lead in batch:
+                attempted_urls.add(_canonical_zhihu_question_url(lead.url) if platform == "zhihu" else lead.url)
+                lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
+                leads.append(lead)
+                ok = post_for_platform(platform, lead)
+                if ok:
+                    lead.status = "已发布"
+                    posted += 1
+                    if posted >= quota:
+                        break
+                    time.sleep(config.MIN_SECONDS_BETWEEN)
+                else:
+                    lead.status = "跳过（已回答/失败）"
+            if platform != "zhihu" or search_round >= config.MAX_ZHIHU_SEARCH_ROUNDS:
+                break
+            log.info("本轮候选均不可发布，继续搜索第 %d 轮（已尝试 %d 条）", search_round + 1, len(attempted_urls))
         if posted < quota:
-            log.warning("仅发布 %d/%d 条：候选线索不足或多为已回答问题，建议扩充关键词", posted, quota)
-    else:
+            log.warning("仅发布 %d/%d 条：已达到搜索轮数上限或没有新的可发布问题", posted, quota)
         for lead in leads:
-            lead.status = "待人工发布（dry-run）"
+            if not lead.status or lead.status == "待发布":
+                lead.status = "未安排（已达今日配额）"
 
     if to_feishu:
         write_to_feishu(leads)
