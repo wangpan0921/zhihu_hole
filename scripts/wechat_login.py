@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """微信公众号后台登录入口。
 
-默认打开有头浏览器，手机扫码登录后保存 data/auth/wechat_mp_state.json。
+默认打开有头浏览器，手机扫码登录后保存持久化 profile，并同步备份
+data/auth/wechat_mp_state.json。
 服务器无图形界面时可加 --headless，脚本会保存 debug/wechat_login_qr.png 供扫码。
 """
 from __future__ import annotations
@@ -13,9 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from playwright.sync_api import sync_playwright  # noqa: E402
-
 from src.utils import DEBUG_DIR, get_logger, load_config  # noqa: E402
+from src.wechat_browser import browser_context, save_storage_state  # noqa: E402
 
 log = get_logger("wechat_login")
 
@@ -26,16 +26,14 @@ def login_wechat_mp(*, headless: bool = False) -> Path:
     storage_path = Path(mp_cfg.get("storage_state", "data/auth/wechat_mp_state.json"))
     storage_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-            ),
-            viewport={"width": 1280, "height": 900},
-            locale="zh-CN",
-        )
+    profile_dir = Path(mp_cfg.get("profile_dir", "data/auth/wechat_mp_chrome_profile"))
+    with browser_context(
+        storage_state=storage_path,
+        profile_dir=profile_dir,
+        headless=headless,
+        viewport_width=1280,
+        viewport_height=900,
+    ) as context:
         page = context.new_page()
         page.goto("https://mp.weixin.qq.com/", wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(3000)
@@ -63,13 +61,11 @@ def login_wechat_mp(*, headless: bool = False) -> Path:
             page.wait_for_timeout(2000)
 
         if not logged_in:
-            browser.close()
             raise TimeoutError("微信公众号扫码登录超时")
 
         page.wait_for_timeout(2000)
-        context.storage_state(path=str(storage_path))
+        save_storage_state(context, storage_path)
         log.info("微信公众号登录态已保存：%s", storage_path)
-        browser.close()
         return storage_path
 
 

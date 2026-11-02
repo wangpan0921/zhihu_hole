@@ -168,8 +168,10 @@ bash scripts/install_cron.sh status   # 查看
 ./venv/bin/python scripts/wechat_login.py
 ```
 
-脚本会打开 Chromium，使用微信扫码登录公众号后台，登录态保存到
-`data/auth/wechat_mp_state.json`。服务器没有图形界面时可以用：
+脚本会打开 Chromium，使用微信扫码登录公众号后台，登录态会保存到持久化
+profile `data/auth/wechat_mp_chrome_profile`，并同步写一份
+`data/auth/wechat_mp_state.json` 备份。持久化 profile 能复用 cookie、localStorage
+和设备信息，比每次加载一次性的 storage state 更不容易触发重新登录。服务器没有图形界面时可以用：
 
 ```bash
 ./venv/bin/python scripts/wechat_login.py --headless
@@ -202,12 +204,16 @@ assets/wechat_covers/2026-08-30-文章标题.png
 ```yaml
 wechat_mp:
   storage_state: "data/auth/wechat_mp_state.json"
+  profile_dir: "data/auth/wechat_mp_chrome_profile"
   edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=..."
   publish_action: "draft"   # 固定保存到草稿箱，不直接发表或群发
 ```
 
 公众号后台若出现扫码确认、安全验证或 DOM 调整，脚本会停止并把关键截图写到
 `debug/wechat_article_*.png`，文章不会被归档。
+
+如果服务端撤销了会话、账号换绑或触发安全验证，任何本地 cookie 都无法永久续期；此时重新运行
+`./venv/bin/python scripts/wechat_login.py` 扫码即可。不要复制或提交 `data/auth/` 下的文件。
 
 ---
 
