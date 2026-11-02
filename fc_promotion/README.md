@@ -37,6 +37,7 @@ fc_promotion/
   config.py                # 卖点/下载邀请/飞书表/各平台搜索URL与选择器/频控
   copywriter.py            # 推广文案（卖点在前 + 图片块 + 原样邀请文本在后）
   promote.py               # 搜索→生成文案→发布→写飞书（知乎专用 + 通用实现）
+  publish_today_drafts.py  # 从推广数据库读取当天知乎草稿并发布
   wechat_promo.py          # 公众号推广软文 → 存草稿
   assets/                  # 三张产品截图（桌面/阅读/设置页）
   login_cli.py             # python -m fc_promotion.login_cli <platform>
@@ -60,8 +61,12 @@ PYTHONPATH=. python -m fc_promotion.promote --platform coolapk --dry-run
 # 3) 生成知乎草稿（本机、有登录态；填入编辑器并等待自动保存，不点击发布）
 PYTHONPATH=. python -m fc_promotion.promote --platform zhihu --draft --max 1
 
-# 4) 确认草稿无误后才允许真发；--post 才会点击发布按钮
-PYTHONPATH=. python -m fc_promotion.promote --platform zhihu --post --max 1
+# 4) 确认当天草稿无误后，从推广数据库读取对应问题并发布（不会重新搜索）
+PYTHONPATH=. python -m fc_promotion.publish_today_drafts --dry-run
+PYTHONPATH=. python -m fc_promotion.publish_today_drafts
+
+# 补发指定日期，或限制最多发布一条
+PYTHONPATH=. python -m fc_promotion.publish_today_drafts --date 2026-11-02 --max 1
 
 # 公众号推广软文存草稿
 PYTHONPATH=. python -m fc_promotion.wechat_promo --dry-run    # 只看 markdown
@@ -72,7 +77,9 @@ PYTHONPATH=. python -m fc_promotion.wechat_promo             # 存草稿（需�
 知乎、酷安、头条和小红书的评论入口当前按纯文字发送，不会把本地路径误发给用户。
 
 知乎的 `--draft` 模式会打开问题的回答编辑器，填入文案并上传三张图片，等待知乎自动保存后关闭页面；
-它不会点击“发布回答”。每天的自动任务使用该模式，人工确认知乎草稿无误后，再手动点击发布或显式运行 `--post`。
+它不会点击“发布回答”。每天的自动任务使用该模式，并把日期、平台和问题链接写入推广数据库。
+人工确认草稿无误后，运行 `publish_today_drafts`：脚本只读取数据库中指定日期的知乎链接，
+打开已自动保存的草稿，核对邀请码、保活提醒和三张远端图片完整后点击发布，不会重新搜索或重写正文。
 
 ## 新平台首次接入须本机核对选择器
 
@@ -84,7 +91,8 @@ PYTHONPATH=. python -m fc_promotion.wechat_promo             # 存草稿（需�
 ## 飞书记录
 
 写入「推广数据库」多维表格；凭据从 zhihu 项目 `.env`（`FEISHU_APP_ID`/`FEISHU_APP_SECRET`）读取。
-注意：飞书自建应用需开通 `bitable:app` 权限，否则写入报 `99991672`。
+注意：飞书自建应用需开通 `bitable:app`（或读写所需的细粒度权限），并添加为该多维表格的协作者。
+当前表结构为 `日期 / 平台 / 链接`，发布脚本依靠这三列定位当天知乎草稿。
 
 ## 扩展新平台
 

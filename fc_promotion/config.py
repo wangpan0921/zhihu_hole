@@ -58,7 +58,7 @@ FEISHU_REF_TABLE_ID = "tblleOk0BDmVS0YN"
 # 推广记录字段名（需与飞书表实际字段一致；首次运行用 list_field_names 核对后调整）
 FIELD_DATE = "日期"
 FIELD_PLATFORM = "平台"
-FIELD_TARGET_URL = "目标链接"
+FIELD_TARGET_URL = "链接"
 FIELD_TARGET_TITLE = "问题/帖子标题"
 FIELD_COMMENT = "推广文案"
 FIELD_STATUS = "状态"

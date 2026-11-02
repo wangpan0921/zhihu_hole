@@ -1,4 +1,4 @@
-"""飞书多维表格（Bitable）写入客户端。
+"""飞书多维表格（Bitable）读写客户端。
 
 推广数据库是多维表格（URL 带 table=tbl...），用 bitable records API 追加记录，
 不同于 zhihu 项目里 scripts/feishu_append_markdown.py 写 docx 文档。
@@ -68,7 +68,7 @@ def parse_bitable_url(url: str) -> tuple[str, str | None]:
 
 
 class FeishuBitable:
-    """面向单张多维表格的追加写入客户端。"""
+    """面向单张多维表格的轻量读写客户端。"""
 
     def __init__(self, *, app_id: str | None = None, app_secret: str | None = None) -> None:
         import os
@@ -129,6 +129,29 @@ class FeishuBitable:
         )
         rec = payload.get("data", {}).get("record", {})
         return rec.get("record_id", "")
+
+    def list_records(self, *, app_token: str, table_id: str) -> list[dict[str, Any]]:
+        """分页读取表内全部记录。"""
+        records: list[dict[str, Any]] = []
+        page_token: str | None = None
+        while True:
+            params: dict[str, Any] = {"page_size": 500}
+            if page_token:
+                params["page_token"] = page_token
+            payload = _request(
+                "GET",
+                f"/bitable/v1/apps/{app_token}/tables/{table_id}/records",
+                self._tenant_token(),
+                params=params,
+            )
+            data = payload.get("data", {})
+            records.extend(data.get("items", []))
+            if not data.get("has_more"):
+                break
+            page_token = data.get("page_token")
+            if not page_token:
+                raise FeishuError("飞书记录响应标记 has_more=true，但缺少 page_token")
+        return records
 
     def list_field_names(self, *, app_token: str, table_id: str) -> list[str]:
         """列出表字段名，便于写入前核对字段（参考表写法时很有用）。"""

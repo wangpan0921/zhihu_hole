@@ -316,15 +316,26 @@ def write_to_feishu(leads: list[Lead]) -> None:
         log.info("推广数据库字段：%s", names)
     except Exception as exc:  # noqa: BLE001
         log.warning("读取飞书字段失败（继续尝试写入）：%s", exc)
-    today = dt.date.today().isoformat()
+    today = int(
+        dt.datetime.combine(
+            dt.date.today(),
+            dt.time.min,
+            tzinfo=dt.timezone(dt.timedelta(hours=8)),
+        ).timestamp()
+        * 1000
+    )
+    platform_names = {
+        "zhihu": "知乎",
+        "xiaohongshu": "小红书",
+        "coolapk": "酷安",
+        "toutiao": "头条",
+        "wechat": "公众号",
+    }
     for lead in leads:
         fields = {
             config.FIELD_DATE: today,
-            config.FIELD_PLATFORM: lead.platform,
-            config.FIELD_TARGET_TITLE: lead.title,
+            config.FIELD_PLATFORM: [platform_names.get(lead.platform, lead.platform)],
             config.FIELD_TARGET_URL: {"link": lead.url, "text": lead.url},
-            config.FIELD_COMMENT: lead.comment,
-            config.FIELD_STATUS: lead.status,
         }
         try:
             rec = bitable.append_record(
@@ -471,6 +482,114 @@ def post_comment_zhihu(lead: Lead, *, draft: bool = False) -> bool:
         return False
 
 
+def publish_saved_zhihu_draft(lead: Lead) -> bool:
+    """打开问题页中已自动保存的草稿，校验内容后点击发布。
+
+    此流程不会生成或覆盖正文，也不会搜索其他问题；数据库链接必须对应
+    当前账号已有的草稿。若草稿内容或三张远端图片不完整，则安全停止。
+    """
+    from .common import humanized_browser as hb
+
+    qurl = _canonical_zhihu_question_url(lead.url)
+    try:
+        with hb.persistent_context(config.ZHIHU_PROFILE, headless=_headless_mode()) as ctx:
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            page.goto("https://www.zhihu.com/", wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            if not any(c.get("name") == "z_c0" for c in ctx.cookies()):
+                log.error("知乎未登录，无法发布草稿。先 python -m fc_promotion.login_cli zhihu")
+                return False
+
+            page.goto(qurl, wait_until="domcontentloaded", timeout=40000)
+            hb.human_pause(2, 4)
+            if "40362" in (page.title() or "") or page.locator("text=请求存在异常").count() > 0:
+                log.error("打开问题页触发风控，停止发布草稿：%s", qurl)
+                return False
+
+            already_answered = any(
+                page.locator(selector).first.count() > 0
+                for selector in (
+                    "a:has-text('我的回答')",
+                    "button:has-text('编辑回答')",
+                    "button:has-text('编辑我的回答')",
+                )
+            )
+            if already_answered:
+                lead.status = "已发布（页面已有回答）"
+                log.info("问题已有回答，无需重复发布：%s", qurl)
+                return True
+
+            editor = None
+            for selector in (".public-DraftEditor-content", "div[contenteditable='true']", ".Editable-content"):
+                locator = page.locator(selector).first
+                if locator.count() > 0:
+                    editor = locator
+                    break
+            if editor is None:
+                entry = None
+                for selector in (
+                    "button:has-text('继续编辑')",
+                    "a:has-text('继续编辑')",
+                    "button:has-text('写回答')",
+                    "a:has-text('写回答')",
+                ):
+                    locator = page.locator(selector).first
+                    if locator.count() > 0:
+                        entry = locator
+                        break
+                if entry is None:
+                    log.error("未找到该问题的草稿入口，停止：%s", qurl)
+                    return False
+                entry.click()
+                hb.human_pause(1.5, 3)
+                for selector in (".public-DraftEditor-content", "div[contenteditable='true']", ".Editable-content"):
+                    locator = page.locator(selector).first
+                    if locator.count() > 0:
+                        editor = locator
+                        break
+            if editor is None:
+                log.error("打开草稿后未找到回答编辑器，停止：%s", qurl)
+                return False
+
+            text = (editor.inner_text() or "").strip()
+            required_text = (config.INVITE_CODE, config.KEEP_ALIVE_REMINDER)
+            missing = [marker for marker in required_text if marker not in text]
+            if missing:
+                log.error("草稿缺少必要内容 %s，停止发布：%s", missing, qurl)
+                return False
+            image_count = editor.locator("img[src^='http']").count()
+            if image_count < len(config.PROMO_IMAGE_REFS):
+                log.error(
+                    "草稿远端图片不完整（%d/%d），停止发布：%s",
+                    image_count,
+                    len(config.PROMO_IMAGE_REFS),
+                    qurl,
+                )
+                return False
+
+            publish_button = None
+            for selector in (
+                "button:has-text('发布回答')",
+                "button:has-text('发布')",
+                ".AnswerAdd button:has-text('发布')",
+            ):
+                locator = page.locator(selector).first
+                if locator.count() > 0:
+                    publish_button = locator
+                    break
+            if publish_button is None:
+                log.error("草稿完整，但未找到发布按钮，未提交：%s", qurl)
+                return False
+            publish_button.click()
+            hb.human_pause(2, 4)
+            lead.status = "已发布"
+            log.info("已发布数据库草稿：%s", qurl)
+            return True
+    except Exception as exc:  # noqa: BLE001
+        log.error("发布数据库草稿失败：%s | %s", qurl, exc)
+        return False
+
+
 def run(platform: str, *, max_leads: int, post: bool, draft: bool = False, to_feishu: bool) -> list[Lead]:
     searcher = SEARCHERS.get(platform)
     if searcher is None:
@@ -542,7 +661,9 @@ def run(platform: str, *, max_leads: int, post: bool, draft: bool = False, to_fe
                 lead.status = "未安排（已达今日配额）"
 
     if to_feishu:
-        write_to_feishu(leads)
+        # 草稿审核流只登记真正保存成功的草稿，避免“已回答/失败”的候选被发布脚本误取。
+        records = [lead for lead in leads if lead.status == "已保存草稿"] if draft else leads
+        write_to_feishu(records)
     return leads
 
 
