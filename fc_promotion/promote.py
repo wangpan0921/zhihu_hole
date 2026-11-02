@@ -3,12 +3,12 @@
 流程（以知乎为例）：
   1. 用本机登录态打开平台搜索页，按关键词找有需求的问题/帖子
   2. 为每条生成一条自然的推广评论（突出体积小/不占空间/耗电低 + 下载方式）
-  3. 可选：用本人账号发出评论（--post；默认 dry-run 不发，只预览）
+  3. 可选：保存到知乎草稿箱（--draft）或用本人账号发出评论（--post）
   4. 把每一条推广记录写入飞书「推广数据库」多维表格，方便人工查看
 
 安全：
   - 仅在本机、有登录态时运行；云端无登录态会直接搜不到。
-  - 默认 dry-run。真正发评论需显式 --post，且受 config 频控限制。
+  - 默认 dry-run。保存草稿需显式 --draft；真正发评论需显式 --post，且受 config 频控限制。
   - 自动发评论有平台风控风险，请把 --max 调小、间隔调大。
 
     python -m fc_promotion.promote --dry-run
@@ -294,10 +294,13 @@ for _p in ("coolapk", "toutiao", "xiaohongshu"):
     SEARCHERS[_p] = _make_generic_searcher(_p)
 
 
-def post_for_platform(platform: str, lead: Lead) -> bool:
-    """按平台分派发布：知乎用专用实现，其余用通用实现。"""
+def post_for_platform(platform: str, lead: Lead, *, draft: bool = False) -> bool:
+    """按平台分派草稿或发布动作：知乎用专用实现，其余用通用实现。"""
     if platform == "zhihu":
-        return post_comment_zhihu(lead)
+        return post_comment_zhihu(lead, draft=draft)
+    if draft:
+        log.error("[%s] 暂不支持草稿模式，跳过：%s", platform, lead.url)
+        return False
     return generic_post_comment(platform, lead)
 
 
@@ -372,10 +375,11 @@ def _upload_zhihu_images(page, editor) -> None:
         log.info("知乎推广图片已上传：%s", path.name)
 
 
-def post_comment_zhihu(lead: Lead) -> bool:
-    """用持久化 profile（拟人化）在知乎问题下写一条简短回答并发布。
+def post_comment_zhihu(lead: Lead, *, draft: bool = False) -> bool:
+    """用持久化 profile 在知乎问题下填写回答并保存或发布。
 
-    发布动作：打开问题页 → 拟人滚动 → 点"写回答" → 逐字输入文案 → 点"发布回答"。
+    草稿动作：打开问题页 → 点"写回答" → 输入文案并上传图片 → 等待知乎自动保存，绝不点击发布。
+    发布动作在草稿动作之后额外点击"发布回答"。
     知乎 DOM 会改版，关键节点用多候选选择器兜底；任一环节失败则返回 False（不误发）。
     """
     from .common import humanized_browser as hb
@@ -440,7 +444,13 @@ def post_comment_zhihu(lead: Lead) -> bool:
             text_only = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text).strip()
             hb.human_type(page, editor, text_only)
             _upload_zhihu_images(page, editor)
-            hb.human_pause(1.5, 3)
+            # 知乎回答编辑器没有稳定的公开“保存草稿”按钮，输入后会自动保存。
+            # 留出请求完成时间后关闭上下文，草稿仍保留在当前账号的草稿箱。
+            hb.human_pause(5, 8)
+
+            if draft:
+                log.info("已保存知乎草稿（未点击发布）：%s", qurl)
+                return True
 
             # 3) 点"发布回答"
             pub = None
@@ -461,13 +471,13 @@ def post_comment_zhihu(lead: Lead) -> bool:
         return False
 
 
-def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[Lead]:
+def run(platform: str, *, max_leads: int, post: bool, draft: bool = False, to_feishu: bool) -> list[Lead]:
     searcher = SEARCHERS.get(platform)
     if searcher is None:
         raise SystemExit(f"平台 {platform} 的搜索器尚未接入；已接入：{list(SEARCHERS)}")
 
-    # dry-run 保持单次搜索；知乎发布模式在候选耗尽后会继续搜索下一轮。
-    if not post:
+    # dry-run 保持单次搜索；知乎发布/草稿模式在候选耗尽后会继续搜索下一轮。
+    if not post and not draft:
         leads = searcher(config.SEARCH_KEYWORDS, max_leads)
         for lead in leads:
             lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
@@ -483,7 +493,8 @@ def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[L
         search_round = 0
         attempted_urls: set[str] = set()
         log.info(
-            "本次计划发布 %d 条（每天随机 1~3，间隔 %d 秒）；知乎最多搜索 %d 轮",
+            "本次计划%s %d 条（每天随机 1~3，间隔 %d 秒）；知乎最多搜索 %d 轮",
+            "保存草稿" if draft else "发布",
             quota,
             config.MIN_SECONDS_BETWEEN,
             config.MAX_ZHIHU_SEARCH_ROUNDS if platform == "zhihu" else 1,
@@ -507,9 +518,9 @@ def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[L
                 attempted_urls.add(_canonical_zhihu_question_url(lead.url) if platform == "zhihu" else lead.url)
                 lead.comment = copywriter.generate_comment(question_title=lead.title, platform=platform)
                 leads.append(lead)
-                ok = post_for_platform(platform, lead)
+                ok = post_for_platform(platform, lead, draft=draft)
                 if ok:
-                    lead.status = "已发布"
+                    lead.status = "已保存草稿" if draft else "已发布"
                     posted += 1
                     if posted >= quota:
                         break
@@ -520,7 +531,12 @@ def run(platform: str, *, max_leads: int, post: bool, to_feishu: bool) -> list[L
                 break
             log.info("本轮候选均不可发布，继续搜索第 %d 轮（已尝试 %d 条）", search_round + 1, len(attempted_urls))
         if posted < quota:
-            log.warning("仅发布 %d/%d 条：已达到搜索轮数上限或没有新的可发布问题", posted, quota)
+            log.warning(
+                "仅%s %d/%d 条：已达到搜索轮数上限或没有新的可处理问题",
+                "保存草稿" if draft else "发布",
+                posted,
+                quota,
+            )
         for lead in leads:
             if not lead.status or lead.status == "待发布":
                 lead.status = "未安排（已达今日配额）"
@@ -535,6 +551,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--platform", default="zhihu", help="平台（默认 zhihu）")
     parser.add_argument("--max", type=int, default=config.MAX_COMMENTS_PER_RUN, help="最多处理线索数")
     parser.add_argument("--post", action="store_true", help="真正用本人账号发评论（默认只预览）")
+    parser.add_argument(
+        "--draft",
+        action="store_true",
+        help="填写并保存知乎草稿，不点击发布（目前仅支持 zhihu）",
+    )
     parser.add_argument("--dry-run", action="store_true", help="只预览，不发布、不写飞书")
     parser.add_argument("--no-feishu", action="store_true", help="不写飞书")
     parser.add_argument(
@@ -547,11 +568,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.require_android_hint:
         config.REQUIRE_ANDROID_HINT = True
 
+    if args.post and args.draft:
+        parser.error("--post 与 --draft 不能同时使用")
+    if args.draft and args.platform != "zhihu":
+        parser.error("--draft 目前仅支持 --platform zhihu")
+
     to_feishu = not (args.dry_run or args.no_feishu)
     post = args.post and not args.dry_run
+    draft = args.draft and not args.dry_run
 
     try:
-        leads = run(args.platform, max_leads=args.max, post=post, to_feishu=to_feishu)
+        leads = run(args.platform, max_leads=args.max, post=post, draft=draft, to_feishu=to_feishu)
     except RuntimeError as exc:
         # 平台入口失效、未登录等可预期运行错误不应打印整段 traceback；把可操作原因直接交给用户。
         log.error("%s", exc)

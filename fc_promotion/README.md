@@ -3,7 +3,7 @@
 「悬浮时钟」App 的推广自动化。复用 zhihu 项目的 Playwright + venv，按平台可扩展。
 
 **平台现状**：
-- 知乎 ✅ 搜问题→写回答（已实测真发通过，持久化 profile 绕 40362 风控）
+- 知乎 ✅ 搜问题→写回答；默认建议保存草稿人工审核，确认后再发布
 - 酷安 ⚠️ 网页端关键词搜索入口已失效（`/s` 返回 404），当前暂停自动搜索；请用酷安 App 手动搜索，或改用其他平台
 - 头条号 / 小红书 ⏳ 搜帖→评论（已接入通用搜索/发布框架，选择器需首次本机实测核对）
 - 公众号 ✅ 发自有推广软文草稿（复用项目现有发布器，强制存草稿不群发）
@@ -57,8 +57,11 @@ PYTHONPATH=. python -m fc_promotion.login_cli <platform> --check   # 校验登�
 # 2) 预览线索与文案（不发布、不写飞书；酷安网页搜索暂不可用）
 PYTHONPATH=. python -m fc_promotion.promote --platform coolapk --dry-run
 
-# 3) 正式跑（本机、有登录态）；--post 才真发，默认每天随机 1~3 条
-PYTHONPATH=. python -m fc_promotion.promote --platform coolapk --post
+# 3) 生成知乎草稿（本机、有登录态；填入编辑器并等待自动保存，不点击发布）
+PYTHONPATH=. python -m fc_promotion.promote --platform zhihu --draft --max 1
+
+# 4) 确认草稿无误后才允许真发；--post 才会点击发布按钮
+PYTHONPATH=. python -m fc_promotion.promote --platform zhihu --post --max 1
 
 # 公众号推广软文存草稿
 PYTHONPATH=. python -m fc_promotion.wechat_promo --dry-run    # 只看 markdown
@@ -67,6 +70,9 @@ PYTHONPATH=. python -m fc_promotion.wechat_promo             # 存草稿（需�
 
 公众号软文会自动插入 `assets/` 下的三张产品截图，并将桌面悬浮图作为草稿封面。
 知乎、酷安、头条和小红书的评论入口当前按纯文字发送，不会把本地路径误发给用户。
+
+知乎的 `--draft` 模式会打开问题的回答编辑器，填入文案并上传三张图片，等待知乎自动保存后关闭页面；
+它不会点击“发布回答”。每天的自动任务使用该模式，人工确认知乎草稿无误后，再手动点击发布或显式运行 `--post`。
 
 ## 新平台首次接入须本机核对选择器
 
