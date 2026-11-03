@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
-from playwright.sync_api import BrowserContext, Locator, Page, sync_playwright
+from playwright.sync_api import BrowserContext, Locator, Page
 
 from .markdown_html import markdown_to_html
+from .wechat_browser import browser_context, profile_has_state, save_storage_state
 from .utils import DEBUG_DIR, get_logger, load_config
 
 log = get_logger("wechat_article_publisher")
@@ -705,27 +706,27 @@ def publish_wechat_article(
     cfg = load_config()
     mp_cfg = cfg.get("wechat_mp") or {}
     storage_state = Path(mp_cfg.get("storage_state", "data/auth/wechat_mp_state.json"))
+    profile_dir = Path(mp_cfg.get("profile_dir", "data/auth/wechat_mp_chrome_profile"))
     configured_url = str(mp_cfg.get("edit_url") or "")
     publish_action = str(mp_cfg.get("publish_action") or DEFAULT_PUBLISH_ACTION)
     if publish_action != "draft":
         raise ValueError("微信公众号文章仅允许保存到草稿箱，请将 wechat_mp.publish_action 设为 draft")
 
-    if not storage_state.exists():
+    if not storage_state.exists() and not profile_has_state(profile_dir):
         raise RuntimeError(
-            f"未找到微信公众号登录态 {storage_state}，请先运行：python scripts/wechat_login.py"
+            f"未找到微信公众号登录态或持久化 profile（{storage_state} / {profile_dir}），"
+            "请先运行：python scripts/wechat_login.py"
         )
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            storage_state=str(storage_state),
-            user_agent=(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-            ),
-            viewport={"width": 1440, "height": 1000},
-            locale="zh-CN",
-        )
+    with browser_context(
+        storage_state=storage_state,
+        profile_dir=profile_dir,
+        headless=True,
+        viewport_width=1440,
+        viewport_height=1000,
+    ) as context:
+        # 保留原有 browser.close() 控制流，实际关闭持久化 context。
+        browser = context
         try:
             context.grant_permissions(
                 ["clipboard-read", "clipboard-write"],
@@ -741,6 +742,8 @@ def publish_wechat_article(
             _shot(page, "00_not_logged_in")
             browser.close()
             raise RuntimeError("微信公众号登录态失效，请重新运行：python scripts/wechat_login.py")
+        # 首页访问成功后立即刷新备份，减少 token/cookie 轮换造成的旧文件问题。
+        save_storage_state(context, storage_state)
 
         token = _extract_token(page.url)
         edit_url = _build_edit_url(configured_url, token)
@@ -818,7 +821,7 @@ def publish_wechat_article(
                 browser.close()
                 raise RuntimeError("公众号发表记录未出现目标文章，不写发布元数据")
         try:
-            context.storage_state(path=str(storage_state))
+            save_storage_state(context, storage_state)
         except Exception:
             pass
         browser.close()
