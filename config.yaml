@@ -135,6 +135,8 @@ wechat_mp:
   storage_state: "data/auth/wechat_mp_state.json"
   # 持久化 Chromium profile；登录态优先从这里复用，storage_state 仅作迁移/备份
   profile_dir: "data/auth/wechat_mp_chrome_profile"
+  # 文章没有专用封面时，所有公众号发布入口统一使用这张图
+  default_cover: "/media/wangpan/hdd1/0-me/zhihu/公众号默认封面图.png"
   # 新建图文链接；可保留 issue 中给出的链接，token 过期时脚本会从首页 URL 尝试补新 token
   edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=606650881&lang=zh_CN&timestamp=1782829732579"
   # 所有公众号文章只保存到草稿箱，不直接发表/群发

@@ -18,13 +18,14 @@ from playwright.sync_api import BrowserContext, Locator, Page
 
 from .markdown_html import markdown_to_html
 from .wechat_browser import browser_context, profile_has_state, save_storage_state
-from .utils import DEBUG_DIR, get_logger, load_config
+from .utils import DEBUG_DIR, PROJECT_ROOT, get_logger, load_config
 
 log = get_logger("wechat_article_publisher")
 
 MP_HOME_URL = "https://mp.weixin.qq.com/"
 DEFAULT_EDIT_PATH = "/cgi-bin/appmsg"
 DEFAULT_PUBLISH_ACTION = "draft"
+DEFAULT_COVER_PATH = PROJECT_ROOT / "公众号默认封面图.png"
 ACTION_ENDPOINT_HINTS = {
     "draft": ("operate_appmsg", "appmsg", "draft"),
     "publish": ("freepublish", "action=publish", "sub=publish", "masssend"),
@@ -42,6 +43,27 @@ SUCCESS_TEXTS = {
     "draft": ("保存成功", "已保存"),
     "publish": ("发表成功", "发布成功", "已发表"),
 }
+
+
+def resolve_cover_path(cover_path: Optional[Path]) -> Path:
+    """优先使用文章专用封面，否则回退到配置的统一默认封面。"""
+    if cover_path is not None and cover_path.is_file():
+        return cover_path
+
+    mp_cfg = (load_config().get("wechat_mp") or {})
+    configured = Path(mp_cfg.get("default_cover", DEFAULT_COVER_PATH))
+    default_cover = configured if configured.is_absolute() else PROJECT_ROOT / configured
+    if default_cover.is_file():
+        if cover_path is not None:
+            log.warning("微信公众号专用封面不存在，改用默认封面：%s", default_cover)
+        else:
+            log.info("微信公众号使用默认封面：%s", default_cover)
+        return default_cover
+
+    requested = f"专用封面 {cover_path}；" if cover_path is not None else ""
+    raise FileNotFoundError(
+        f"微信公众号封面不存在：{requested}默认封面 {default_cover}"
+    )
 
 
 def _shot(page: Page, name: str) -> None:
@@ -712,6 +734,9 @@ def publish_wechat_article(
     if publish_action != "draft":
         raise ValueError("微信公众号文章仅允许保存到草稿箱，请将 wechat_mp.publish_action 设为 draft")
 
+    if not dry_run:
+        cover_path = resolve_cover_path(cover_path)
+
     if not storage_state.exists() and not profile_has_state(profile_dir):
         raise RuntimeError(
             f"未找到微信公众号登录态或持久化 profile（{storage_state} / {profile_dir}），"
@@ -773,9 +798,7 @@ def publish_wechat_article(
         _dump_editor_html(page, "03_body_typed")
 
         if not dry_run:
-            if cover_path is None:
-                browser.close()
-                raise RuntimeError("微信公众号保存草稿前必须提供封面图")
+            assert cover_path is not None
             if not _upload_cover_as_first_image(page, cover_path):
                 _shot(page, "04_cover_failed")
                 browser.close()

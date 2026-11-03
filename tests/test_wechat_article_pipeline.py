@@ -134,26 +134,61 @@ def test_dry_run_does_not_write_meta_or_archive(tmp_path, monkeypatch):
     assert not published.exists()
 
 
-def test_missing_cover_stops_before_publish_and_meta(tmp_path, monkeypatch):
+def test_missing_article_cover_delegates_to_default_cover(tmp_path, monkeypatch):
     pending, published = _patch_dirs(tmp_path, monkeypatch)
     article = pending / "article.md"
     article.write_text("# 标题\n\n正文", encoding="utf-8")
 
-    called = False
+    calls = []
 
     def fake_publish(*args, **kwargs):
-        nonlocal called
-        called = True
-        return "unexpected"
+        calls.append((args, kwargs))
+        return "draft-url"
 
     monkeypatch.setattr(wp, "publish_wechat_article", fake_publish)
 
-    with pytest.raises(RuntimeError, match="封面不存在"):
-        wp.publish_one_pending_to_wechat()
+    assert wp.publish_one_pending_to_wechat() == "draft-url"
 
-    assert not called
-    assert article.exists()
-    assert not (published / "article.wechat.meta.json").exists()
+    assert calls[0][1]["cover_path"] is None
+    assert (published / "article.wechat.meta.json").exists()
+
+
+def test_resolve_cover_prefers_article_cover(tmp_path, monkeypatch):
+    article_cover = tmp_path / "article.png"
+    article_cover.write_bytes(b"article")
+    default_cover = tmp_path / "default.png"
+    default_cover.write_bytes(b"default")
+    monkeypatch.setattr(
+        pub,
+        "load_config",
+        lambda: {"wechat_mp": {"default_cover": str(default_cover)}},
+    )
+
+    assert pub.resolve_cover_path(article_cover) == article_cover
+
+
+def test_resolve_cover_uses_default(tmp_path, monkeypatch):
+    default_cover = tmp_path / "default.png"
+    default_cover.write_bytes(b"default")
+    monkeypatch.setattr(
+        pub,
+        "load_config",
+        lambda: {"wechat_mp": {"default_cover": str(default_cover)}},
+    )
+
+    assert pub.resolve_cover_path(None) == default_cover
+
+
+def test_resolve_cover_fails_when_default_is_missing(tmp_path, monkeypatch):
+    missing = tmp_path / "missing.png"
+    monkeypatch.setattr(
+        pub,
+        "load_config",
+        lambda: {"wechat_mp": {"default_cover": str(missing)}},
+    )
+
+    with pytest.raises(FileNotFoundError, match="默认封面"):
+        pub.resolve_cover_path(None)
 
 
 def test_cover_lookup_supports_common_image_extensions(tmp_path, monkeypatch):
