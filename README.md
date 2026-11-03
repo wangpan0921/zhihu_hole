@@ -185,13 +185,13 @@ profile `data/auth/wechat_mp_chrome_profile`，并同步写一份
 ./venv/bin/python scripts/publish_wechat_articles.py --dry-run
 ```
 
-它会从 `docs/pending/` 按修改时间选最早的一篇 Markdown，套公众号排版模板后填入图文编辑器；`--dry-run` 不会上传封面、保存草稿或归档。保存草稿前还要准备与 Markdown 同名的封面，例如：
+它会从 `docs/pending/` 按修改时间选最早的一篇 Markdown，套公众号排版模板后填入图文编辑器；`--dry-run` 不会上传封面、保存草稿或归档。可以准备与 Markdown 同名的专用封面，例如：
 
 ```text
 assets/wechat_covers/2026-08-30-文章标题.png
 ```
 
-支持 `.png`、`.jpg`、`.jpeg` 和 `.webp`。保存草稿时会把封面作为正文首图上传，让公众号取首图作为默认封面。确认截图和编辑器内容正常后执行：
+支持 `.png`、`.jpg`、`.jpeg` 和 `.webp`。没有专用封面时，普通文章、训练效能文章和少儿课程文章都会使用 `wechat_mp.default_cover` 配置的统一默认封面。保存草稿时会把选中的封面作为正文首图上传，让公众号取首图作为默认封面。确认截图和编辑器内容正常后执行：
 
 ```bash
 ./venv/bin/python scripts/publish_wechat_articles.py
@@ -205,6 +205,7 @@ assets/wechat_covers/2026-08-30-文章标题.png
 wechat_mp:
   storage_state: "data/auth/wechat_mp_state.json"
   profile_dir: "data/auth/wechat_mp_chrome_profile"
+  default_cover: "公众号默认封面图.png"  # 相对于项目根目录
   edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=..."
   publish_action: "draft"   # 固定保存到草稿箱，不直接发表或群发
 ```

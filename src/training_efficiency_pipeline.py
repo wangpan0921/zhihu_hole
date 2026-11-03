@@ -138,8 +138,6 @@ def _publish_wechat(title: str, body: str, source: Path, published_dir: Path, *,
         if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
     )
     cover_path = _select_wechat_cover(cover_candidates)
-    if not dry_run and cover_path is None:
-        raise RuntimeError(f"微信公众号封面不存在，请将图片放入：{source.parent}")
     if cover_path is not None:
         log.info("微信公众号封面：%s", cover_path)
     url = publish_wechat_article(title, body, cover_path=cover_path, source_dir=source.parent, dry_run=dry_run)

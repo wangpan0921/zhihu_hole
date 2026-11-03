@@ -66,9 +66,6 @@ def publish_one_pending_to_wechat(*, dry_run: bool = False) -> Optional[str]:
     log.info("微信公众号标题：%s | 正文 %d 字", title, len(body))
 
     cover_path = _cover_path_for(target)
-    if not dry_run and cover_path is None:
-        expected = WECHAT_COVER_DIR / f"{target.stem}.png"
-        raise RuntimeError(f"微信公众号封面不存在，请先生成：{expected}")
     if cover_path is not None:
         log.info("微信公众号封面：%s", cover_path)
 

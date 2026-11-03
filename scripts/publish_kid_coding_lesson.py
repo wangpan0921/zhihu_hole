@@ -103,7 +103,7 @@ def _platforms(value: str) -> list[str]:
     return [value]
 
 
-def _wechat_cover_path(article_file: Path) -> Path:
+def _wechat_cover_path(article_file: Path) -> Optional[Path]:
     """Prefer the lesson explicit cover image for the WeChat draft."""
     lesson_dir = article_file.parent
     for directory in (lesson_dir / "images", lesson_dir):
@@ -111,9 +111,7 @@ def _wechat_cover_path(article_file: Path) -> Path:
             candidate = directory / f"cover{extension}"
             if candidate.is_file():
                 return candidate
-    raise FileNotFoundError(
-        f"未找到微信公众号封面，请准备：{lesson_dir / 'images' / 'cover.png'}"
-    )
+    return None
 
 
 def _write_meta(
