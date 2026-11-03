@@ -205,7 +205,7 @@ assets/wechat_covers/2026-08-30-文章标题.png
 wechat_mp:
   storage_state: "data/auth/wechat_mp_state.json"
   profile_dir: "data/auth/wechat_mp_chrome_profile"
-  default_cover: "/media/wangpan/hdd1/0-me/zhihu/公众号默认封面图.png"
+  default_cover: "公众号默认封面图.png"  # 相对于项目根目录
   edit_url: "https://mp.weixin.qq.com/cgi-bin/appmsg?t=media/appmsg_edit_v2&action=edit&isNew=1&type=10&token=..."
   publish_action: "draft"   # 固定保存到草稿箱，不直接发表或群发
 ```
