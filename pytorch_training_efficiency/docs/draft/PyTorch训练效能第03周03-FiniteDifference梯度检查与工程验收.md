@@ -1,7 +1,7 @@
 # PyTorch训练效能第03周03-FiniteDifference梯度检查与工程验收
 课程使用的源码保存在github 这个项目：https://github.com/wangpan0921/pytorch_training_efficiency。
 
-自动微分通常被当作可信的黑盒，但自定义 loss、手写算子或 Python/C++ 扩展一旦写错，训练可能只是悄悄变差。本课用不依赖 autograd 的 finite difference（有限差分）近似梯度，独立核对 `backward()`，并把它变成一个可重复的工程验收。
+自动微分通常被当作可信的黑盒，但自定义 loss、手写算子或 Python/C++ 扩展一旦写错，训练可能只是悄悄变差。本课先不使用 PyTorch 的 autograd，而是通过轻微改变参数、观察损失变化，来估算梯度。这种方法叫 finite difference（有限差分），独立核对 `backward()`，并把它变成一个可重复的工程验收。
 
 ## 本课目标
 
