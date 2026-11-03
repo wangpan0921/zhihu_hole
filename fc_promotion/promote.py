@@ -438,7 +438,9 @@ def post_comment_zhihu(lead: Lead, *, draft: bool = False) -> bool:
             if write_btn is None:
                 log.error("未找到'写回答'入口（可能已回答/未登录/页面改版），跳过：%s", qurl)
                 return False
-            write_btn.click()
+            # 知乎固定顶栏偶尔会拦截常规点击；按钮已通过可见性检查后强制点击，
+            # 避免把真实可写的问题误判为发布失败。
+            write_btn.click(force=True)
             hb.human_pause(1.5, 3)
 
             # 2) 定位编辑器并逐字输入
