@@ -12,7 +12,9 @@ import re
 import time
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
+
+from bs4 import BeautifulSoup
 
 from playwright.sync_api import BrowserContext, Locator, Page
 
@@ -601,11 +603,68 @@ def _find_published_article(page: Page, title: str) -> Optional[str]:
     return None
 
 
+def _draft_list_url(page: Page, begin: int = 0) -> Optional[str]:
+    token = _extract_token(page.url)
+    if not token:
+        return None
+    query = urlencode(
+        {
+            "begin": begin,
+            "count": 20,
+            "type": 77,
+            "action": "list_card",
+            "token": token,
+            "lang": "zh_CN",
+        }
+    )
+    return f"https://mp.weixin.qq.com/cgi-bin/appmsg?{query}"
+
+
+def _find_draft_by_title(page: Page, title: str) -> Optional[str]:
+    """在公众号草稿列表中按标题确认保存结果并返回编辑链接。"""
+    expected = _normalize_title(title)
+    for begin in (0, 20, 40):
+        list_url = _draft_list_url(page, begin)
+        if not list_url:
+            return None
+        try:
+            page.goto(list_url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(1500)
+            soup = BeautifulSoup(page.content(), "html.parser")
+        except Exception as exc:  # noqa: BLE001
+            log.warning("查询微信公众号草稿列表失败：%s", exc)
+            return None
+
+        for node in soup.select("a[href]"):
+            text = _normalize_title(node.get_text(" ", strip=True))
+            if text != expected and expected not in text:
+                continue
+            href = str(node.get("href") or "")
+            if "appmsg" in href or "appmsgid" in href:
+                url = urljoin(page.url, href)
+                log.info("已在微信公众号草稿列表确认文章：%s", url)
+                return url
+        # 新版列表可能把标题放在 data-title，而编辑链接在祖先节点。
+        for node in soup.select("[data-title]"):
+            node_title = _normalize_title(str(node.get("data-title") or ""))
+            if node_title != expected and expected not in node_title:
+                continue
+            link = node.find_parent(href=True) or node.find("a", href=True)
+            if link is not None:
+                href = str(link.get("href") or "")
+                if "appmsg" in href or "appmsgid" in href:
+                    url = urljoin(page.url, href)
+                    log.info("已在微信公众号草稿列表确认文章：%s", url)
+                    return url
+    return None
+
+
 def _verify_action_success(
     page: Page,
     action: str,
     response_payloads: list[dict[str, Any]],
-) -> bool:
+    title: Optional[str] = None,
+) -> Optional[str]:
     response_rets = [
         ret
         for payload in response_payloads
@@ -620,28 +679,33 @@ def _verify_action_success(
     )
     if any(ret != 0 for ret in response_rets):
         log.error("微信公众号操作接口返回失败：ret=%s", response_rets)
-        return False
+        return None
     if error_text and not publish_success:
         log.error("微信公众号操作被页面校验拦截：%s", error_text)
-        return False
+        return None
     if any(ret == 0 for ret in response_rets):
         if publish_success:
             log.info("微信公众号发表接口返回成功：ret=0；忽略页面残留校验文字")
         else:
             log.info("微信公众号操作接口返回成功：ret=0")
-        return True
+        return page.url
 
     success_text = _visible_text(page, SUCCESS_TEXTS[action])
     if success_text:
         log.info("检测到微信公众号成功提示：%s", success_text)
-        return True
+        return page.url
 
     if action == "draft" and _saved_url(page.url):
         log.info("微信公众号草稿 URL 已包含素材 ID：%s", page.url)
-        return True
+        return page.url
+
+    if action == "draft" and title:
+        draft_url = _find_draft_by_title(page, title)
+        if draft_url:
+            return draft_url
 
     log.error("未检测到微信公众号成功响应、成功提示或已保存素材 ID")
-    return False
+    return None
 
 
 
@@ -832,11 +896,14 @@ def publish_wechat_article(
         page.wait_for_timeout(8000)
         _shot(page, "06_after_action")
         _dump_page_html(page, "06_after_action")
-        if not _verify_action_success(page, publish_action, action_payloads):
+        verified_url = _verify_action_success(
+            page, publish_action, action_payloads, title=title
+        )
+        if not verified_url:
             _shot(page, "07_action_unverified")
             browser.close()
             raise RuntimeError("微信公众号操作未通过成功校验，不写发布元数据")
-        final_url = page.url
+        final_url = verified_url
         if publish_action == "publish":
             final_url = _find_published_article(page, title)
             if not final_url:

@@ -223,6 +223,23 @@ class FakeWechatPage:
         return FakeTextMatches(text in self.visible_texts)
 
 
+class FakeDraftListPage(FakeWechatPage):
+    def __init__(self, html, url="https://mp.weixin.qq.com/cgi-bin/appmsg?token=123"):
+        super().__init__(url=url)
+        self.html = html
+        self.visited = []
+
+    def goto(self, url, **kwargs):
+        self.visited.append(url)
+        self.url = url
+
+    def wait_for_timeout(self, _milliseconds):
+        return None
+
+    def content(self):
+        return self.html
+
+
 class FakeRequest:
     def __init__(self, method="POST", post_data=""):
         self.method = method
@@ -299,4 +316,33 @@ def test_success_response_is_accepted_without_page_error():
         page,
         "publish",
         [{"base_resp": {"ret": 0}}],
+    )
+
+
+def test_empty_draft_response_is_confirmed_from_draft_list():
+    page = FakeDraftListPage(
+        '<a href="/cgi-bin/appmsg?action=edit&appmsgid=456">'
+        "Linux 后台执行脚本：setsid、nohup、& 与重定向到底有什么区别？"
+        "</a>"
+    )
+
+    result = pub._verify_action_success(
+        page,
+        "draft",
+        [],
+        title="Linux 后台执行脚本：setsid、nohup、& 与重定向到底有什么区别？",
+    )
+
+    assert result == "https://mp.weixin.qq.com/cgi-bin/appmsg?action=edit&appmsgid=456"
+    assert page.visited
+
+
+def test_empty_draft_response_stays_failed_when_title_is_not_found():
+    page = FakeDraftListPage('<div class="appmsg_title">另一篇文章</div>')
+
+    assert not pub._verify_action_success(
+        page,
+        "draft",
+        [],
+        title="目标文章",
     )
