@@ -1,0 +1,10 @@
+{
+  "title": "Linux 后台执行脚本：`setsid`、`nohup`、`&` 与重定向到底有什么区别？",
+  "source_file": "2026-10-31-Linux后台执行脚本-setsid-nohup与重定向的区别.md",
+  "published_at": "2026-11-03",
+  "article_url": null,
+  "platform": "wechat_mp",
+  "status": "draft",
+  "repaired_after_manual_publish": true,
+  "verification": "user-confirmed"
+}
