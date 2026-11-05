@@ -256,7 +256,7 @@ class FakeResponse:
         return self.payload
 
 
-def test_publish_response_filter_rejects_plain_autosave():
+def test_response_filter_accepts_draft_save_endpoint():
     response = FakeResponse(
         "https://mp.weixin.qq.com/cgi-bin/operate_appmsg?sub=create",
         {"base_resp": {"ret": 0}},
@@ -266,6 +266,15 @@ def test_publish_response_filter_rejects_plain_autosave():
     assert pub._action_response_payload(response, "draft") == {
         "base_resp": {"ret": 0}
     }
+
+
+def test_response_filter_rejects_unrelated_appmsg_endpoint():
+    response = FakeResponse(
+        "https://mp.weixin.qq.com/cgi-bin/appmsg?action=autosave",
+        {"base_resp": {"ret": 0}},
+    )
+
+    assert pub._action_response_payload(response, "draft") is None
 
 
 def test_publish_response_filter_accepts_freepublish_success():
@@ -337,6 +346,19 @@ def test_empty_draft_response_is_confirmed_from_draft_list():
     assert page.visited
 
 
+def test_draft_list_card_data_appid_is_confirmed():
+    page = FakeDraftListPage(
+        '<div data-appid="100001039" class="weui-desktop-card">'
+        '<a href="javascript:void(0);" class="weui-desktop-publish__cover__title">'
+        "<span>目标文章</span>"
+        "</a></div>"
+    )
+
+    result = pub._find_draft_by_title(page, "目标文章")
+
+    assert "appmsgid=100001039" in result
+
+
 def test_empty_draft_response_stays_failed_when_title_is_not_found():
     page = FakeDraftListPage('<div class="appmsg_title">另一篇文章</div>')
 
@@ -344,5 +366,16 @@ def test_empty_draft_response_stays_failed_when_title_is_not_found():
         page,
         "draft",
         [],
+        title="目标文章",
+    )
+
+
+def test_draft_ret_zero_stays_failed_when_title_is_not_in_draft_list():
+    page = FakeDraftListPage('<div class="appmsg_title">另一篇文章</div>')
+
+    assert not pub._verify_action_success(
+        page,
+        "draft",
+        [{"base_resp": {"ret": 0}}],
         title="目标文章",
     )

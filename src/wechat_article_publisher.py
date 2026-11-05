@@ -29,7 +29,6 @@ DEFAULT_EDIT_PATH = "/cgi-bin/appmsg"
 DEFAULT_PUBLISH_ACTION = "draft"
 DEFAULT_COVER_PATH = PROJECT_ROOT / "公众号默认封面图.png"
 ACTION_ENDPOINT_HINTS = {
-    "draft": ("operate_appmsg", "appmsg", "draft"),
     "publish": ("freepublish", "action=publish", "sub=publish", "masssend"),
 }
 VALIDATION_ERROR_TEXTS = (
@@ -534,7 +533,10 @@ def _action_response_payload(
         signature = f"{url}\n{post_data}"
         if request.method.upper() != "POST":
             return None
-        if not any(hint in signature for hint in ACTION_ENDPOINT_HINTS[action]):
+        if action == "draft":
+            if "/cgi-bin/operate_appmsg" not in url:
+                return None
+        elif not any(hint in signature for hint in ACTION_ENDPOINT_HINTS[action]):
             return None
         payload = response.json()
         return payload if isinstance(payload, dict) else None
@@ -623,39 +625,65 @@ def _draft_list_url(page: Page, begin: int = 0) -> Optional[str]:
 def _find_draft_by_title(page: Page, title: str) -> Optional[str]:
     """在公众号草稿列表中按标题确认保存结果并返回编辑链接。"""
     expected = _normalize_title(title)
-    for begin in (0, 20, 40):
-        list_url = _draft_list_url(page, begin)
-        if not list_url:
-            return None
-        try:
-            page.goto(list_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(1500)
-            soup = BeautifulSoup(page.content(), "html.parser")
-        except Exception as exc:  # noqa: BLE001
-            log.warning("查询微信公众号草稿列表失败：%s", exc)
-            return None
+    # 新草稿通常在第一页；先重试第一页，兼容保存后的短暂列表延迟。
+    for attempt in range(3):
+        begins = (0,) if attempt < 2 else (0, 20, 40)
+        for begin in begins:
+            list_url = _draft_list_url(page, begin)
+            if not list_url:
+                return None
+            try:
+                page.goto(list_url, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(1500)
+                soup = BeautifulSoup(page.content(), "html.parser")
+            except Exception as exc:  # noqa: BLE001
+                log.warning("查询微信公众号草稿列表失败：%s", exc)
+                return None
 
-        for node in soup.select("a[href]"):
-            text = _normalize_title(node.get_text(" ", strip=True))
-            if text != expected and expected not in text:
-                continue
-            href = str(node.get("href") or "")
-            if "appmsg" in href or "appmsgid" in href:
-                url = urljoin(page.url, href)
-                log.info("已在微信公众号草稿列表确认文章：%s", url)
-                return url
-        # 新版列表可能把标题放在 data-title，而编辑链接在祖先节点。
-        for node in soup.select("[data-title]"):
-            node_title = _normalize_title(str(node.get("data-title") or ""))
-            if node_title != expected and expected not in node_title:
-                continue
-            link = node.find_parent(href=True) or node.find("a", href=True)
-            if link is not None:
-                href = str(link.get("href") or "")
+            for node in soup.select("a[href]"):
+                text = _normalize_title(node.get_text(" ", strip=True))
+                if text != expected:
+                    continue
+                href = str(node.get("href") or "")
                 if "appmsg" in href or "appmsgid" in href:
                     url = urljoin(page.url, href)
                     log.info("已在微信公众号草稿列表确认文章：%s", url)
                     return url
+            # 新版列表可能把标题放在 data-title，而编辑链接在祖先节点。
+            for node in soup.select("[data-title]"):
+                node_title = _normalize_title(str(node.get("data-title") or ""))
+                if node_title != expected:
+                    continue
+                link = node.find_parent(href=True) or node.find("a", href=True)
+                if link is not None:
+                    href = str(link.get("href") or "")
+                    if "appmsg" in href or "appmsgid" in href:
+                        url = urljoin(page.url, href)
+                        log.info("已在微信公众号草稿列表确认文章：%s", url)
+                        return url
+            # 当前草稿箱把素材 ID 放在卡片 data-appid，标题链接本身是 javascript:。
+            for card in soup.select("[data-appid]"):
+                title_node = card.select_one(".weui-desktop-publish__cover__title")
+                if title_node is None:
+                    continue
+                card_title = _normalize_title(title_node.get_text(" ", strip=True))
+                appmsgid = str(card.get("data-appid") or "")
+                if card_title != expected or not appmsgid:
+                    continue
+                token = _extract_token(page.url)
+                query = urlencode(
+                    {
+                        "t": "media/appmsg_edit",
+                        "action": "edit",
+                        "type": 77,
+                        "appmsgid": appmsgid,
+                        "token": token or "",
+                        "lang": "zh_CN",
+                    }
+                )
+                url = f"https://mp.weixin.qq.com/cgi-bin/appmsg?{query}"
+                log.info("已在微信公众号草稿列表确认文章：%s", url)
+                return url
     return None
 
 
@@ -688,7 +716,8 @@ def _verify_action_success(
             log.info("微信公众号发表接口返回成功：ret=0；忽略页面残留校验文字")
         else:
             log.info("微信公众号操作接口返回成功：ret=0")
-        return page.url
+        if action != "draft":
+            return page.url
 
     success_text = _visible_text(page, SUCCESS_TEXTS[action])
     if success_text:
@@ -704,7 +733,7 @@ def _verify_action_success(
         if draft_url:
             return draft_url
 
-    log.error("未检测到微信公众号成功响应、成功提示或已保存素材 ID")
+    log.error("未在微信公众号草稿列表确认目标文章，不写发布元数据")
     return None
 
 
