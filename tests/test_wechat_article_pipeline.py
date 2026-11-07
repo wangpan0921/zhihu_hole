@@ -200,6 +200,48 @@ def test_cover_lookup_supports_common_image_extensions(tmp_path, monkeypatch):
     assert wp._cover_path_for(article) == expected
 
 
+class _FakeContinueButton:
+    def __init__(self):
+        self.clicked = False
+
+    def count(self):
+        return 1
+
+    @property
+    def first(self):
+        return self
+
+    def is_visible(self):
+        return True
+
+    def is_enabled(self):
+        return True
+
+    def click(self, **_kwargs):
+        self.clicked = True
+
+
+class _FakeStructurePage:
+    def __init__(self):
+        self.button = _FakeContinueButton()
+
+    def get_by_role(self, *_args, **_kwargs):
+        return self.button
+
+    def get_by_text(self, *_args, **_kwargs):
+        return _FakeContinueButton()
+
+    def wait_for_timeout(self, _milliseconds):
+        return None
+
+
+def test_continue_structure_check_confirms_editor_dialog():
+    page = _FakeStructurePage()
+
+    assert pub._continue_structure_check(page)
+    assert page.button.clicked
+
+
 class FakeTextMatches:
     def __init__(self, visible):
         self.visible = visible

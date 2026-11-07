@@ -316,6 +316,26 @@ def _fill_title(page: Page, title: str) -> bool:
         return False
 
 
+def _continue_structure_check(page: Page) -> bool:
+    """确认新版编辑器粘贴 HTML 后出现的内容结构检测弹窗。"""
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        for locator in (
+            page.get_by_role("button", name="继续插入", exact=True),
+            page.get_by_text("继续插入", exact=True),
+        ):
+            try:
+                if locator.count() and locator.first.is_visible() and locator.first.is_enabled():
+                    locator.first.click(timeout=2000)
+                    page.wait_for_timeout(1000)
+                    log.info("已确认微信公众号内容结构检测，继续插入正文")
+                    return True
+            except Exception:
+                continue
+        page.wait_for_timeout(250)
+    return True
+
+
 def _paste_html_body(page: Page, body_html: str) -> bool:
     body = _body_locator(page)
     if body is None:
@@ -361,6 +381,9 @@ def _paste_html_body(page: Page, body_html: str) -> bool:
         log.warning("粘贴正文失败：%s", e)
         return False
     page.wait_for_timeout(2500)
+    if not _continue_structure_check(page):
+        return False
+    page.wait_for_timeout(1000)
 
     try:
         length = body.evaluate("el => (el.textContent || '').length")
