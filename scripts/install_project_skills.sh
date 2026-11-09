@@ -10,6 +10,7 @@ CODEX_TARGET="${CODEX_SKILLS_DIR:-$CODEX_HOME_DIR/skills}"
 KIRO_TARGET="${KIRO_SKILLS_DIR:-$PROJECT_ROOT/.kiro/skills}"
 
 SKILLS=(
+  add-weread-book
   excalidraw-lesson-images
   generate-kid-coding-video
   publish-wechat-album-to-zhihu
@@ -27,7 +28,7 @@ usage() {
   bash scripts/install_project_skills.sh check
 
 说明：
-  install  将项目 skills/ 下的四个技能复制到 Codex 和项目 Kiro 目录。
+  install  将项目 skills/ 下的五个技能复制到 Codex 和项目 Kiro 目录。
   check    检查两个目标目录是否与项目内技能一致，不修改文件。
   --force  替换目标目录中同名技能；不影响其他技能。
   --link   使用指向项目 skills/ 的符号链接，而不是复制文件。

@@ -2,6 +2,7 @@
 
 本目录是 `zhihu_hole` 项目的技能唯一来源，包含：
 
+- `add-weread-book`
 - `excalidraw-lesson-images`
 - `generate-kid-coding-video`
 - `publish-wechat-album-to-zhihu`
@@ -34,4 +35,4 @@ bash scripts/install_project_skills.sh check
 bash scripts/install_project_skills.sh install --force --link
 ```
 
-安装器只处理上述四个同名技能，不会删除或覆盖其他技能。目标目录已有同名技能时必须显式传入 `--force`。
+安装器只处理上述五个同名技能，不会删除或覆盖其他技能。目标目录已有同名技能时必须显式传入 `--force`。
