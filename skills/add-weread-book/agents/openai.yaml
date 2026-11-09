@@ -1,0 +1,7 @@
+interface:
+  display_name: "加入微信读书书籍"
+  short_description: "索引微信读书并安全加入书籍池"
+  default_prompt: "使用 $add-weread-book 将指定微信读书链接加入项目书籍池，并完成全文完整度验证。"
+
+policy:
+  allow_implicit_invocation: true

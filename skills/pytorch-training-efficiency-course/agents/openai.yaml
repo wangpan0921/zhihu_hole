@@ -1,0 +1,8 @@
+interface:
+  display_name: "PyTorch训练效能课程生成器"
+  short_description: "生成理论结合实验的 PyTorch 训练效能课程"
+  brand_color: "#D97706"
+  default_prompt: "使用 $pytorch-training-efficiency-course 生成一周面向初学者的 PyTorch 训练效能课程，包含可运行实验和验收产物。"
+
+policy:
+  allow_implicit_invocation: true

@@ -20,7 +20,7 @@ set -euo pipefail
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PY="$PROJECT_DIR/venv/bin/python"
 LOG="$PROJECT_DIR/logs/cron.log"
-WECHAT_ALBUM_SKILL_RUNNER="${WECHAT_ALBUM_SKILL_RUNNER:-/home/wangpan/.codex/skills/publish-wechat-album-to-zhihu/scripts/publish-next.sh}"
+WECHAT_ALBUM_SKILL_RUNNER="${WECHAT_ALBUM_SKILL_RUNNER:-$PROJECT_DIR/skills/publish-wechat-album-to-zhihu/scripts/publish-next.sh}"
 
 if [[ ! -x "$PY" ]]; then
   echo "错误：找不到 $PY ，请先创建 venv 并安装依赖" >&2
@@ -42,7 +42,7 @@ RUN_PUB_M="cd $PROJECT_DIR && $PY scripts/publish_slot.py morning >> $LOG 2>&1"
 RUN_PUB_E="cd $PROJECT_DIR && $PY scripts/publish_slot.py evening >> $LOG 2>&1"
 RUN_PUB_ARTICLE="cd $PROJECT_DIR && $PY scripts/publish_articles.py >> $LOG 2>&1"
 RUN_PUB_WECHAT="cd $PROJECT_DIR && $PY scripts/publish_wechat_articles.py >> $LOG 2>&1"
-RUN_PUB_WECHAT_ALBUM="$WECHAT_ALBUM_SKILL_RUNNER >> $LOG 2>&1"
+RUN_PUB_WECHAT_ALBUM="cd $PROJECT_DIR && $WECHAT_ALBUM_SKILL_RUNNER >> $LOG 2>&1"
 RUN_PUB_TRAINING="cd $PROJECT_DIR && $PY scripts/publish_training_efficiency.py >> $LOG 2>&1"
 RUN_CLEANUP_DEBUG="cd $PROJECT_DIR && mkdir -p logs && scripts/cleanup_debug.sh >> logs/debug-cleanup.log 2>&1"
 

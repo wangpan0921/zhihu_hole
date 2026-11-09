@@ -155,7 +155,7 @@ bash scripts/install_cron.sh status   # 查看
 表示首篇已在知乎存在。手动执行下一篇：
 
 ```bash
-/home/wangpan/.codex/skills/publish-wechat-album-to-zhihu/scripts/publish-next.sh
+bash skills/publish-wechat-album-to-zhihu/scripts/publish-next.sh
 ```
 
 ---

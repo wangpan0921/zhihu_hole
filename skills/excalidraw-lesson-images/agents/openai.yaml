@@ -1,0 +1,7 @@
+interface:
+  display_name: "Excalidraw Lesson Images"
+  short_description: "Generate Excalidraw-style lesson diagrams"
+  default_prompt: "Use $excalidraw-lesson-images to generate editable Excalidraw-style diagrams from a lesson 配图.md."
+
+policy:
+  allow_implicit_invocation: true
