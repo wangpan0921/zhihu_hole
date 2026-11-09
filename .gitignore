@@ -37,6 +37,7 @@ tests/*
 # 调试截图
 debug/
 *.png
+*.gif
 
 # 构建/运行产物
 artifacts/

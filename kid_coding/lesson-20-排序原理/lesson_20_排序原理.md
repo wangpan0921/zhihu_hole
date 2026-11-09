@@ -74,9 +74,9 @@ loot[j + 1] = temp
 ```python
 loot = [7, 2, 9, 4]
 
-for i in range(len(loot) - 1):
+for i in range(len(loot) - 1):  # 前三个位置都确定后，只剩下一个元素，它只能放在最后一个位置，因此不需要第 4 轮。
     min_index = i
-    for j in range(i + 1, len(loot)):
+    for j in range(i + 1, len(loot)):   # i + 1 之前的位置已经放好了合适的元素
         if loot[j] < loot[min_index]:
             min_index = j
 
