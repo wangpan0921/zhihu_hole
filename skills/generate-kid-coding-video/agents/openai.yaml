@@ -1,0 +1,4 @@
+interface:
+  display_name: "生成少儿编程讲解视频"
+  short_description: "从课程文章生成逐屏对齐的断句字幕、互动问答和讲解视频"
+  default_prompt: "使用 $generate-kid-coding-video 为指定课程生成字幕与画面逐屏对齐、带完整互动题的讲解视频。"
