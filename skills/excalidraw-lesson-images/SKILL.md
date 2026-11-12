@@ -1,6 +1,6 @@
 ---
 name: excalidraw-lesson-images
-description: Generate Excalidraw-style lesson illustrations from Chinese lesson image specs such as 配图.md, especially for kid_coding lessons. Use when asked to create course diagrams, concept illustrations, running-code screenshots, summary cards, or editable .excalidraw/SVG/PNG assets that follow the established hand-drawn Excalidraw style.
+description: 根据中文课程配图规范生成 Excalidraw 风格的课程插图，尤其适用于 kid_coding 课程；可生成概念图、代码运行图、总结卡和可编辑的 .excalidraw/SVG/PNG 资源。
 ---
 
 # Excalidraw 课程配图
@@ -15,16 +15,16 @@ description: Generate Excalidraw-style lesson illustrations from Chinese lesson 
 
 根据课程的 `配图.md` 或类似配图规范生成可直接用于文章的课程插图。输出应保持统一的手绘白板风格，并在适用时提供可编辑的 `.excalidraw` 源文件以及 SVG、PNG 导出文件。
 
-This skill is optimized for the `kid_coding` workflow but can be used for any course folder with a Chinese image spec.
+本技能针对 `kid_coding` 工作流优化，也适用于任何包含中文配图规范的课程目录。
 
 ## 使用时机
 
 当用户要求以下内容时使用本技能：
 
-- generate Excalidraw-style images for a lesson
-- generate images from a `配图.md`
-- create concept diagrams, flowcharts, comparison diagrams, warning diagrams, code-running screenshots, summary cards, cover/preview placeholders
-- preserve editable `.excalidraw` source files and export `.png`
+- 为课程生成 Excalidraw 风格的图片；
+- 根据 `配图.md` 生成配图；
+- 创建概念图、流程图、对照图、警示图、代码运行截图、总结卡和封面/预告占位图；
+- 保留可编辑的 `.excalidraw` 源文件并导出 `.png`。
 
 如果用户只需要写实照片或 AI 光栅插画，使用 `imagegen` 技能；如果规范同时包含 AI 插画和 Excalidraw 概念图，概念图使用确定性的本地 SVG/PNG 生成流程，除非用户明确要求 AI 光栅图。
 
@@ -64,28 +64,28 @@ This skill is optimized for the `kid_coding` workflow but can be used for any co
 
 ## 风格规则
 
-- Concept diagrams / code screenshots / summary cards default to **dark mode export**, matching Excalidraw's own "export with dark theme": wrap the drawn content in a group and apply `filter: invert(93%) hue-rotate(180deg)` in the SVG `<style>` (draw everything with normal light-mode colors first, then let the filter invert it — do not hand-pick dark-mode colors element by element). Save `.excalidraw` files with `appState.theme: "dark"` to match.
-- For Kid coding outputs, "dark mode export" applies to the final PNG as well as the SVG preview. A CSS filter in the SVG source is not sufficient evidence: verify the raster output visually and with a corner-pixel check (normally near `#121212` for landscape concept/code images). If the selected exporter ignores the filter, perform deterministic post-processing before delivery.
-- Exception: pixel-art / AI-style illustrations (cover art, preview-next art, any scene-style pixel illustration) must NOT use the invert filter — inversion produces ugly, wrong-looking scenery (skies, grass, sun, skin tones all shift to broken colors). Render those with `dark: false` (plain light-mode colors) so they look as designed.
-- White background for concept diagrams before the invert filter is applied (i.e. author them as if for light mode; the filter turns the white canvas dark and flips other colors accordingly).
-- Hand-drawn feel: rough outlines, slightly imperfect shapes, rounded rectangles, arrows, and casual type.
-- Use clear semantic color (as authored in light mode, before inversion):
+- 概念图、代码运行图和总结卡默认使用 **dark mode export**，匹配 Excalidraw 的深色导出：把绘制内容放入一个 SVG 分组，并在 `<style>` 中使用 `filter: invert(93%) hue-rotate(180deg)`；先按浅色主题绘制，再交给滤镜反转，不要逐个元素手工挑深色；`.excalidraw` 的 `appState.theme` 设置为 `dark`。
+- 对 Kid coding 产物，“dark mode export”同时适用于最终 PNG 和 SVG 预览。SVG 源码中存在 CSS 滤镜并不能证明栅格图已变深，必须视觉检查并检查角落像素（横版概念图/代码图通常接近 `#121212`）；如果导出器忽略滤镜，交付前执行确定性的后处理。
+- 像素风或 AI 场景图（封面、预告和其他场景插画）是例外：禁止使用反色滤镜，否则天空、草地和主体颜色会失真；使用 `dark: false` 输出原始设计颜色。
+- 概念图在应用反色滤镜前使用白色画布，即按浅色主题绘制，滤镜负责将画布变为深色并转换其他颜色。
+- 保持手绘感：略不规则的描边、圆角矩形、箭头和轻松易读的字体。
+- 使用清晰的语义色（按浅色源稿绘制，之后由滤镜转换）：
   - green for correct/active/safe
   - orange/yellow for conditions and uncertainty
   - red for warnings, false paths, danger, or dead loops
   - blue for initial values, code structure, or neutral concepts
-- Keep text large enough for mobile article reading.
-- Avoid dense tables in images; split into cards or lanes.
-- Keep code screenshots visually consistent across lessons: dark editor panel, output panel, large monospace text.
-- Avoid official Minecraft screenshots, UI, logos, or copied assets. Pixel-style original homage art is acceptable.
-- Image credit: every generated image must show the exact text `公众号：icey66wang` at the bottom-right. Keep it readable but secondary, inside a safe margin (about 24 px on 1200x675 images and 18 px on 900x1200 cards), with sufficient contrast against the local background. Do not use the old `icey66wang`-only credit or generator-specific placeholder credits such as `像素工坊 · 少儿编程课`.
-- Put the credit in a shared image-wrapper/helper when writing a lesson generator so every output path receives it consistently. For direct raster generation, apply it as a deterministic post-processing overlay.
+- 字号要足够大，适合手机文章阅读。
+- 避免在图片中堆叠密集表格，拆成卡片或流程区域。
+- 代码截图在各课之间保持统一：深色编辑器面板、输出面板和大号等宽字体。
+- 不使用官方 Minecraft 截图、UI、Logo 或复制的官方资源；可以使用原创的泛化像素风场景。
+- 每张生成图右下角必须显示精确文本 `公众号：icey66wang`，放在安全边距内（横图约 24 px，竖版卡片约 18 px），清晰但不抢主体；不要使用旧的 `icey66wang` 单独署名或生成器占位署名。
+- 编写课程生成器时，将署名放入共享的图片外壳/辅助函数，确保所有输出路径一致；直接生成光栅图时使用确定性的后处理叠加署名。
 
 ## Excalidraw 源文件要求
 
-For actual concept diagrams, always save an editable `.excalidraw` file alongside SVG/PNG. Never skip this — every concept-diagram figure (`fig0N_*` diagrams built from shapes/text, not code screenshots or pixel-art covers) must ship all three of `.excalidraw` + `.svg` + `.png`. Before finishing, grep the generator script for every `write("figNN_*.svg", ...)` call and confirm each one has a matching `writeEx("figNN_*.excalidraw", ...)` call; a missing `.excalidraw` for a concept diagram is a bug to fix, not an acceptable gap.
+真正的概念图必须始终与 SVG/PNG 一起保存可编辑的 `.excalidraw` 文件。不能省略：每张由形状/文本构成的概念图（不是代码截图或像素风封面）都必须同时交付 `.excalidraw`、`.svg` 和 `.png`。完成前检查生成器中每个 `write("figNN_*.svg", ...)` 是否都有对应的 `writeEx("figNN_*.excalidraw", ...)`，缺少源文件必须修复。
 
-Minimum `.excalidraw` JSON:
+`.excalidraw` JSON 的最小结构：
 
 ```json
 {
@@ -102,17 +102,17 @@ Minimum `.excalidraw` JSON:
 }
 ```
 
-Use element objects with stable fields Excalidraw expects: `id`, `type`, `x`, `y`, `width`, `height`, `strokeColor`, `backgroundColor`, `roughness`, `seed`, `versionNonce`, `isDeleted`, and text fields for text elements.
+元素对象必须包含 Excalidraw 需要的稳定字段：`id`、`type`、`x`、`y`、`width`、`height`、`strokeColor`、`backgroundColor`、`roughness`、`seed`、`versionNonce`、`isDeleted`；文本元素还要包含文本字段。
 
-SVG previews may be more polished than the `.excalidraw` source, but they must preserve the same layout and wording.
+SVG 预览可以比 `.excalidraw` 源文件更精致，但布局和文案必须保持一致。
 
-Source parity: for every concept diagram, the `.excalidraw` source must contain the same semantic text, panels, data nodes, and arrows as the SVG/PNG. A minimal placeholder source is invalid. Before finishing, compare text-node counts and key labels between the SVG and `.excalidraw`, and regenerate both from the same coordinate/data definitions when they diverge.
+源文件一致性：每张概念图的 `.excalidraw` 必须包含与 SVG/PNG 相同的语义文本、面板、数据节点和箭头；最小占位源文件无效。完成前比较 SVG 与 `.excalidraw` 的文本节点数量和关键标签，发现差异时从同一套坐标/数据定义重新生成。
 
-The bottom-right `公众号：icey66wang` credit is part of source parity. It must be an editable text element in each concept diagram's `.excalidraw` source, not only a flattened PNG/SVG overlay.
+右下角的 `公众号：icey66wang` 署名属于源文件一致性的一部分，必须作为每张概念图 `.excalidraw` 中的可编辑文本元素存在，不能只叠加在扁平化 PNG/SVG 上。
 
 ## 实现方式
 
-For repeatable lesson generation, create helpers in the generator script:
+为了可重复生成课程配图，可以在生成脚本中提供以下辅助函数：
 
 - `svgWrap(body, width, height)` for SVG boilerplate, fonts, markers, and hand-drawn filter
 - `text`, `multiline`, `rect`, `line`, `arrow`, `poly`, `ellipse` for SVG elements
@@ -120,11 +120,11 @@ For repeatable lesson generation, create helpers in the generator script:
 - `codeShot(name, title, codeLines, outputLines)` for running-code screenshots
 - `summaryCard()` for vertical recap cards
 
-Do not invent a universal framework unless multiple lessons need refactoring. A focused lesson-specific script is usually faster and easier to audit.
+除非多课确实需要重构，否则不要创建通用框架；聚焦单课的脚本通常更快，也更容易审计。
 
 ## 校验命令
 
-Use these patterns after generation:
+生成后可使用以下命令模式：
 
 ```bash
 node -e "for (const f of process.argv.slice(1)) { const data=JSON.parse(require('fs').readFileSync(f,'utf8')); console.log(require('path').basename(f), data.type, data.elements.length); }" <files.excalidraw>
@@ -142,11 +142,11 @@ for p in sys.argv[1:]:
  print(os.path.basename(p), im.size, [round(x,2) for x in stat.stddev])" <files.png>
 ```
 
-If a tool cannot read a directory because of sandbox restrictions, request the required filesystem escalation instead of silently skipping validation.
+如果工具因沙箱限制无法读取目录，应申请所需的文件系统权限，不要默默跳过校验。
 
 ## 输出命名
 
-Prefer descriptive names with figure numbers:
+优先使用带图号的描述性名称：
 
 - `cover.png`, `cover.svg`
 - `fig02_for_vs_while.excalidraw`, `.svg`, `.png`
@@ -155,4 +155,4 @@ Prefer descriptive names with figure numbers:
 - `summary.svg`, `summary.png`
 - `preview_next.svg`, `preview_next.png`
 
-Do not overwrite unrelated existing assets. If a filename already exists and the user did not ask to replace it, create a versioned sibling or ask before overwriting.
+不要覆盖无关的现有资源。如果文件名已存在且用户没有要求替换，应创建带版本号的同级文件或先询问。
