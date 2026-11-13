@@ -421,3 +421,29 @@ def test_draft_ret_zero_stays_failed_when_title_is_not_in_draft_list():
         [{"base_resp": {"ret": 0}}],
         title="目标文章",
     )
+
+
+def test_shrink_cover_keeps_small_file(tmp_path):
+    cover = tmp_path / "small.png"
+    cover.write_bytes(b"x" * 100)
+
+    assert pub._shrink_cover(cover) == cover
+
+
+def test_shrink_cover_compresses_large_cover(tmp_path, monkeypatch):
+    import os
+
+    from PIL import Image
+
+    monkeypatch.setattr(pub, "DEBUG_DIR", tmp_path / "debug")
+    cover = tmp_path / "big.png"
+    # 随机像素让 PNG 足够大，模拟 6MB 级默认封面。
+    Image.frombytes("RGB", (2496, 1664), os.urandom(2496 * 1664 * 3)).save(cover)
+    assert cover.stat().st_size > pub.COVER_MAX_BYTES
+
+    out = pub._shrink_cover(cover)
+
+    assert out != cover and out.suffix == ".jpg"
+    assert out.stat().st_size < cover.stat().st_size
+    with Image.open(out) as im:
+        assert im.width == pub.COVER_MAX_WIDTH

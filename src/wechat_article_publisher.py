@@ -46,7 +46,48 @@ SUCCESS_TEXTS = {
 }
 
 
+COVER_MAX_BYTES = 1_500_000
+COVER_MAX_WIDTH = 1600
+
+
+def _shrink_cover(cover_path: Path) -> Path:
+    """把过大的封面压缩为 JPEG，避免公众号封面裁剪/保存接口上传大图时被中断。
+
+    原始 6MB 级 PNG 会让 cropimage/filetransfer 请求 ERR_ABORTED，
+    页面提示“系统繁忙，请重新裁剪封面”，并拖住草稿保存。
+    """
+    try:
+        if cover_path.stat().st_size <= COVER_MAX_BYTES:
+            return cover_path
+        from PIL import Image
+
+        out = DEBUG_DIR / f"wechat_cover_{cover_path.stem}_{int(cover_path.stat().st_mtime)}.jpg"
+        if not out.is_file():
+            with Image.open(cover_path) as im:
+                im = im.convert("RGB")
+                if im.width > COVER_MAX_WIDTH:
+                    ratio = COVER_MAX_WIDTH / im.width
+                    im = im.resize((COVER_MAX_WIDTH, int(im.height * ratio)), Image.LANCZOS)
+                out.parent.mkdir(parents=True, exist_ok=True)
+                im.save(out, "JPEG", quality=85, optimize=True)
+        log.info(
+            "微信公众号封面过大（%d 字节），已压缩为：%s（%d 字节）",
+            cover_path.stat().st_size,
+            out,
+            out.stat().st_size,
+        )
+        return out
+    except Exception as exc:  # noqa: BLE001
+        log.warning("压缩微信公众号封面失败，继续使用原图：%s", exc)
+        return cover_path
+
+
 def resolve_cover_path(cover_path: Optional[Path]) -> Path:
+    """优先使用文章专用封面，否则回退到配置的统一默认封面。"""
+    return _shrink_cover(_resolve_cover_source(cover_path))
+
+
+def _resolve_cover_source(cover_path: Optional[Path]) -> Path:
     """优先使用文章专用封面，否则回退到配置的统一默认封面。"""
     if cover_path is not None and cover_path.is_file():
         return cover_path
@@ -455,6 +496,40 @@ def _select_cover_from_content(page: Page) -> bool:
     return False
 
 
+BUSY_TEXTS = ("系统繁忙", "请重新裁剪封面", "操作太频繁", "请稍后再试")
+
+
+def _visible_toast_text(page: Page) -> Optional[str]:
+    """读取微信公众号页面当前可见的提示条/toast 文本，用于诊断服务端拒绝。"""
+    for sel in (".weui-desktop-toast", ".weui-desktop-tips", ".page_tips", ".JS_TIPS", "#js_tips"):
+        try:
+            cand = page.locator(sel)
+            for i in range(cand.count()):
+                node = cand.nth(i)
+                if node.is_visible():
+                    text = (node.inner_text(timeout=1000) or "").strip()
+                    if text:
+                        return text[:120]
+        except Exception:
+            continue
+    return None
+
+
+def _select_cover_with_retry(page: Page, attempts: int = 3) -> bool:
+    """封面裁剪偶发“系统繁忙，请重新裁剪封面”，退避后重试。"""
+    for attempt in range(1, attempts + 1):
+        if _select_cover_from_content(page):
+            return True
+        toast = _visible_toast_text(page)
+        log.warning("第 %d/%d 次设置封面失败，页面提示：%s", attempt, attempts, toast or "无")
+        try:
+            page.keyboard.press("Escape")
+        except Exception:
+            pass
+        page.wait_for_timeout(3000 * attempt)
+    return False
+
+
 def _upload_cover_as_first_image(page: Page, cover_path: Path) -> bool:
     if not cover_path.is_file():
         log.warning("微信公众号封面文件不存在：%s", cover_path)
@@ -498,7 +573,7 @@ def _upload_cover_as_first_image(page: Page, cover_path: Path) -> bool:
             try:
                 if body.locator("img").count() > image_count_before:
                     log.info("封面图片已上传到远端并稳定插入正文")
-                    return _select_cover_from_content(page)
+                    return _select_cover_with_retry(page)
             except Exception:
                 pass
         if _cover_is_ready(page):
@@ -877,6 +952,7 @@ def publish_wechat_article(
             pass
 
         page = context.new_page()
+
         page.goto(MP_HOME_URL, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(2500)
         if not _ensure_logged_in(context, page):
@@ -946,6 +1022,7 @@ def publish_wechat_article(
             raise RuntimeError(f"没有找到微信公众号操作按钮：{publish_action}")
 
         page.wait_for_timeout(8000)
+        log.info("保存后页面提示：%s；URL：%s", _visible_toast_text(page) or "无", page.url[:160])
         _shot(page, "06_after_action")
         _dump_page_html(page, "06_after_action")
         verified_url = _verify_action_success(
