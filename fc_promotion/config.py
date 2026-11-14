@@ -9,9 +9,9 @@ APP_NAME = "悬浮时钟"
 # 图文推广素材。相对引用用于 Markdown 正文，绝对目录用于公众号上传。
 PROMO_ASSET_DIR = Path(__file__).resolve().parent / "assets"
 PROMO_IMAGE_REFS = (
-    ("桌面悬浮时钟", "fc_promotion/assets/shot_home.jpg"),
-    ("微信读书内悬浮时钟", "fc_promotion/assets/shot_weread.jpg"),
-    ("悬浮时钟设置页", "fc_promotion/assets/shot_app.jpg"),
+    ("桌面悬浮时钟", "fc_promotion/assets/1.png"),
+    ("微信读书内悬浮时钟", "fc_promotion/assets/2.jpg"),
+    ("悬浮时钟设置页", "fc_promotion/assets/3.png"),
 )
 
 # 用户点名要突出的卖点（APK 体积小 / 不占空间 / 耗电低）
@@ -60,8 +60,10 @@ FIELD_DATE = "日期"
 FIELD_PLATFORM = "平台"
 FIELD_TARGET_URL = "链接"
 FIELD_TARGET_TITLE = "问题/帖子标题"
-FIELD_COMMENT = "推广文案"
-FIELD_STATUS = "状态"
+FIELD_COMMENT = "推荐文案"
+FIELD_REVIEW = "人工审核通过"
+FIELD_PUBLISHED = "已经发布"
+FIELD_NOTE = "备注"
 
 # ---- 搜索目标：按平台配搜索入口与关键词 ----
 # 悬浮时钟是**安卓 App**，关键词要带安卓/手机限定，避免召回苹果版、桌面版。

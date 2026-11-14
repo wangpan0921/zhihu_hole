@@ -130,6 +130,20 @@ class FeishuBitable:
         rec = payload.get("data", {}).get("record", {})
         return rec.get("record_id", "")
 
+    def update_record(
+        self, *, app_token: str, table_id: str, record_id: str, fields: dict[str, Any]
+    ) -> str:
+        """更新一条记录，返回 record_id。"""
+        payload = _request(
+            "PUT",
+            f"/bitable/v1/apps/{app_token}/tables/{table_id}/records/{record_id}",
+            self._tenant_token(),
+            json={"fields": fields},
+            headers={"Content-Type": "application/json; charset=utf-8"},
+        )
+        rec = payload.get("data", {}).get("record", {})
+        return rec.get("record_id", record_id)
+
     def list_records(self, *, app_token: str, table_id: str) -> list[dict[str, Any]]:
         """分页读取表内全部记录。"""
         records: list[dict[str, Any]] = []

@@ -336,6 +336,9 @@ def write_to_feishu(leads: list[Lead]) -> None:
             config.FIELD_DATE: today,
             config.FIELD_PLATFORM: [platform_names.get(lead.platform, lead.platform)],
             config.FIELD_TARGET_URL: {"link": lead.url, "text": lead.url},
+            config.FIELD_REVIEW: "否",
+            config.FIELD_PUBLISHED: "否",
+            config.FIELD_COMMENT: re.sub(r"!\[[^\]]*\]\([^)]*\)", "", lead.comment).strip(),
         }
         try:
             rec = bitable.append_record(
