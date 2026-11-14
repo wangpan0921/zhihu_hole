@@ -6,12 +6,13 @@ fc_promotion 位于 zhihu 项目根目录下，故项目根 = 本文件的上上
 from __future__ import annotations
 
 from pathlib import Path
+import os
 
 # .../zhihu/fc_promotion/common/paths.py -> parents[2] == .../zhihu
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 DATA_DIR = PROJECT_ROOT / "data"
-AUTH_DIR = DATA_DIR / "auth"
+AUTH_DIR = Path(os.getenv("FC_PROMOTION_AUTH_DIR", str(DATA_DIR / "auth")))
 LOGS_DIR = PROJECT_ROOT / "logs"
 DEBUG_DIR = PROJECT_ROOT / "debug"
 ENV_FILE = PROJECT_ROOT / ".env"

@@ -359,8 +359,8 @@ def _upload_zhihu_images(page, editor) -> None:
     """
     from pathlib import Path
 
-    image_input = page.locator("input[type='file'][accept*='image']").first
-    if image_input.count() == 0:
+    image_inputs = page.locator("input[type='file']")
+    if image_inputs.count() == 0:
         raise RuntimeError("知乎回答编辑器中未找到图片上传 input")
     for _, ref in config.PROMO_IMAGE_REFS:
         path = config.PROMO_ASSET_DIR / Path(ref).name
@@ -369,18 +369,19 @@ def _upload_zhihu_images(page, editor) -> None:
         remote = False
         for attempt in range(1, 4):
             before = editor.locator("img").count()
+            image_input = image_inputs.last
             image_input.set_input_files(str(path), timeout=15000)
-            deadline = time.time() + 30
+            deadline = time.time() + 45
             while time.time() < deadline:
                 images = editor.locator("img")
                 for index in range(before, images.count()):
                     src = images.nth(index).get_attribute("src") or ""
-                    if src.startswith(("https://", "http://")) and "zhimg.com" in src:
+                    if src.startswith(("https://", "http://")) and not src.startswith(("blob:", "data:")):
                         remote = True
                         break
                 if remote:
                     break
-                page.wait_for_timeout(500)
+                page.wait_for_timeout(700)
             if remote:
                 break
             log.warning("知乎图片上传等待超时，准备重试(%d/3)：%s", attempt, path.name)
