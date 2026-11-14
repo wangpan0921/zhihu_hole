@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import random
 import sys
+import time
 from typing import Any
 
 from . import config
 from .common.feishu_bitable import FeishuBitable, FeishuError
 from .promote import Lead, post_comment_zhihu
+from .common import humanized_browser as hb
 
 
 def _date(value: Any) -> dt.date | None:
@@ -74,9 +77,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         return 0
     failed = 0
-    for record in records:
+    for index, record in enumerate(records):
+        if index:
+            delay = random.randint(90, 240)
+            print(f"模拟人工间隔 {delay} 秒后继续下一条。")
+            time.sleep(delay)
+
         fields = record["fields"]
         lead = Lead(platform="zhihu", title="飞书审核通过记录", url=_link(fields.get(config.FIELD_TARGET_URL)), comment=str(fields[config.FIELD_COMMENT]))
+        hb.human_pause(8, 20)
         if post_comment_zhihu(lead, draft=False):
             bitable.update_record(
                 app_token=app_token,
