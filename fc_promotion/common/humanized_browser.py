@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 import random
 import time
 from pathlib import Path
@@ -95,21 +96,42 @@ def persistent_context(
 ) -> Iterator[BrowserContext]:
     """打开一个持久化、带反自动化指纹的浏览器上下文。headful 更接近真人。"""
     with sync_playwright() as p:
-        ctx = _launch_persistent_context(
-            p.chromium,
-            user_data_dir=str(profile_dir(profile_name)),
-            headless=headless,
-            user_agent=_UA,
-            viewport={"width": viewport_width, "height": viewport_height},
-            locale="zh-CN",
-            args=["--disable-blink-features=AutomationControlled"],
-        )
-        ctx.add_init_script(_STEALTH_JS)
+        cdp_url = os.getenv("FC_PROMOTION_CDP_URL", "").strip()
+        connected_browser = None
+        if cdp_url:
+            try:
+                connected_browser = p.chromium.connect_over_cdp(cdp_url)
+                contexts = connected_browser.contexts
+                if not contexts:
+                    raise RuntimeError("CDP Chrome 没有可用浏览器上下文")
+                ctx = contexts[0]
+                log.info("已通过 CDP 连接现有 Chrome：%s", cdp_url)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"无法通过 CDP 连接 Chrome（{cdp_url}）：{exc}。"
+                    "请确认 Chrome 使用 --remote-debugging-port 启动。"
+                ) from exc
+        else:
+            ctx = _launch_persistent_context(
+                p.chromium,
+                user_data_dir=str(profile_dir(profile_name)),
+                headless=headless,
+                user_agent=_UA,
+                viewport={"width": viewport_width, "height": viewport_height},
+                locale="zh-CN",
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+        if not cdp_url:
+            ctx.add_init_script(_STEALTH_JS)
         try:
             yield ctx
         finally:
-            with contextlib.suppress(Exception):
-                ctx.close()
+            if connected_browser is not None:
+                with contextlib.suppress(Exception):
+                    connected_browser.close()
+            else:
+                with contextlib.suppress(Exception):
+                    ctx.close()
 
 
 # ---- 拟人化动作 ----

@@ -21,6 +21,21 @@
 + 关闭 AutomationControlled + 抹 webdriver 指纹 + 拟人动作（随机停顿/滚动/逐字输入）。
 登录态绑在持久化 profile（`data/auth/<platform>_chrome_profile`），扫码一次长期复用。
 
+如果已有 Chrome 正在使用该 profile，不能再次启动 Playwright 独占同一目录。可让 Chrome
+在启动时开放 CDP 端口，然后脚本直接连接现有浏览器，会复用现有页面和登录态：
+
+```bash
+# 仅需首次启动 Chrome 时加参数；不要在已有 Chrome 进程上重复执行
+/opt/google/chrome/google-chrome --remote-debugging-port=9222 \
+  --user-data-dir=/media/wangpan/hdd1/0-me/zhihu/data/auth/zhihu_chrome_profile
+
+# 脚本通过 CDP 连接现有 Chrome
+export FC_PROMOTION_CDP_URL=http://127.0.0.1:9222
+PYTHONPATH=. python -m fc_promotion.publish_approved --dry-run
+```
+
+`FC_PROMOTION_CDP_URL` 只在当前命令中生效；未设置时仍使用原来的持久化 profile 启动方式。
+
 ## 目录结构
 
 ```
