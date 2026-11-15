@@ -10,7 +10,7 @@ from typing import Any
 
 from . import config
 from .common.feishu_bitable import FeishuBitable, FeishuError
-from .promote import Lead, publish_saved_zhihu_draft
+from .promote import Lead, post_comment_zhihu
 from .common import humanized_browser as hb
 
 
@@ -88,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
         hb.human_pause(8, 20)
         # 数据库记录对应知乎中已经自动保存的草稿；这里仅打开并发布该草稿，
         # 不重新搜索问题，也不覆盖草稿正文。
-        if publish_saved_zhihu_draft(lead):
+        if post_comment_zhihu(lead, draft=False):
             bitable.update_record(
                 app_token=app_token,
                 table_id=config.FEISHU_PROMO_TABLE_ID,

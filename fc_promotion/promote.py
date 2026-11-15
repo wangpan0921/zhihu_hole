@@ -390,7 +390,63 @@ def _upload_zhihu_images(page, editor) -> None:
         log.info("知乎推广图片已上传：%s", path.name)
 
 
-def post_comment_zhihu(lead: Lead, *, draft: bool = False) -> bool:
+def _zhihu_answer_ok(page, qid: str) -> tuple[bool, str]:
+    """读取本账号在该问题下的回答正文，校验邀请码/保活各 1 次、图片数等于素材数。"""
+    try:
+        me = page.evaluate("fetch('/api/v4/me',{credentials:'include'}).then(r=>r.json())")
+        token = me.get("url_token")
+        url = f"/api/v4/members/{token}/answers?limit=20&offset=0&sort_by=created&include=data[*].content"
+        resp = page.evaluate("(u)=>fetch(u,{credentials:'include'}).then(r=>r.json())", url)
+        for item in resp.get("data") or []:
+            if str((item.get("question") or {}).get("id")) == qid:
+                c = item.get("content") or ""
+                inv, keep, figs = c.count(config.INVITE_CODE), c.count(config.KEEP_ALIVE_REMINDER), c.count("<figure")
+                need = len(config.PROMO_IMAGE_REFS)
+                return (inv == 1 and keep == 1 and figs == need,
+                        f"邀请码{inv}次 保活{keep}次 图片{figs}/{need}")
+        return False, "未找到该问题的回答"
+    except Exception as exc:  # noqa: BLE001
+        return False, f"读取失败：{exc}"
+
+
+_PUBLISHED_QIDS: set[str] | None = None
+
+
+def _zhihu_published_qids(page) -> set[str] | None:
+    """读取当前账号已发布回答所属的问题 ID 集合（只读，进程内缓存）。
+
+    用来区分"问题已被本账号回答"与"只有自动保存的草稿"：两者页面上都显示"编辑回答"。
+    接口失败返回 None，调用方应保守按已回答处理，避免重复回答。
+    """
+    global _PUBLISHED_QIDS
+    if _PUBLISHED_QIDS is not None:
+        return _PUBLISHED_QIDS
+    try:
+        me = page.evaluate("fetch('/api/v4/me',{credentials:'include'}).then(r=>r.json())")
+        token = (me or {}).get("url_token")
+        if not token:
+            return None
+        qids: set[str] = set()
+        offset = 0
+        while offset < 3000:
+            url = f"/api/v4/members/{token}/answers?limit=20&offset={offset}&include=data[*].question.title"
+            resp = page.evaluate("(u)=>fetch(u,{credentials:'include'}).then(r=>r.json())", url)
+            data = (resp or {}).get("data") or []
+            for item in data:
+                qid = str((item.get("question") or {}).get("id") or "")
+                if qid:
+                    qids.add(qid)
+            if not data or (resp.get("paging") or {}).get("is_end"):
+                break
+            offset += 20
+        _PUBLISHED_QIDS = qids
+        return qids
+    except Exception as exc:  # noqa: BLE001
+        log.warning("读取已发布回答列表失败，按已回答处理：%s", exc)
+        return None
+
+
+def post_comment_zhihu(lead: Lead, *, draft: bool = False, force_edit: bool = False) -> bool:
     """用持久化 profile 在知乎问题下填写回答并保存或发布。
 
     草稿动作：打开问题页 → 点"写回答" → 输入文案并上传图片 → 等待知乎自动保存，绝不点击发布。
@@ -428,19 +484,33 @@ def post_comment_zhihu(lead: Lead, *, draft: bool = False) -> bool:
                 for s in ("a:has-text('我的回答')", "button:has-text('编辑回答')",
                           "button:has-text('编辑我的回答')", "button:has-text('继续编辑')")
             )
+            reuse_draft = False
             if not has_write and answered:
-                log.info("该问题已回答过，跳过换下一条：%s", qurl)
+                qid = qurl.rstrip("/").split("/")[-1]
+                published = _zhihu_published_qids(page)
+                if (published is None or qid in published) and not force_edit:
+                    log.info("该问题已回答过，跳过换下一条：%s", qurl)
+                    return False
+                # 不在已发布回答里：页面上的"编辑回答"是残留的自动保存草稿。
+                # 知乎 Draft.js 编辑器无法可靠清空（实测会新旧混排、丢字），宁可跳过交人工处理。
+                log.error("该问题存在未发布的残留草稿，自动清空不可靠，跳过需人工处理：%s", qurl)
                 return False
 
-            # 1) 点"写回答"
+            # 1) 点"写回答"（草稿则点"编辑回答/继续编辑"）
             write_btn = None
-            for sel in ("button:has-text('写回答')", "a:has-text('写回答')", ".QuestionHeaderActions button:has-text('回答')"):
+            open_candidates = (
+                ("button:has-text('编辑回答')", "button:has-text('继续编辑')",
+                 "button:has-text('编辑我的回答')", "a:has-text('继续编辑')")
+                if reuse_draft else
+                ("button:has-text('写回答')", "a:has-text('写回答')", ".QuestionHeaderActions button:has-text('回答')")
+            )
+            for sel in open_candidates:
                 loc = page.locator(sel).first
                 if loc.count() > 0:
                     write_btn = loc
                     break
             if write_btn is None:
-                log.error("未找到'写回答'入口（可能已回答/未登录/页面改版），跳过：%s", qurl)
+                log.error("未找到'写回答/编辑草稿'入口（可能未登录/页面改版），跳过：%s", qurl)
                 return False
             # 知乎固定顶栏偶尔会拦截常规点击；按钮已通过可见性检查后强制点击，
             # 避免把真实可写的问题误判为发布失败。
@@ -481,11 +551,42 @@ def post_comment_zhihu(lead: Lead, *, draft: bool = False) -> bool:
                 return False
             pub.click()
             hb.human_pause(2, 4)
-            log.info("已提交回答：%s", qurl)
-            return True
+            # 发布后用接口核实：问题确实出现在本账号已发布回答里才算成功
+            global _PUBLISHED_QIDS
+            qid = qurl.rstrip("/").split("/")[-1]
+            for _ in range(8):
+                hb.human_pause(2.5, 3.5)
+                _PUBLISHED_QIDS = None
+                published = _zhihu_published_qids(page)
+                if published and qid in published:
+                    ok, detail = _zhihu_answer_ok(page, qid)
+                    if ok:
+                        log.info("已提交回答并核实发布成功（%s）：%s", detail, qurl)
+                        return True
+                    log.warning("回答已发布但正文校验未通过（%s），继续等待：%s", detail, qurl)
+            log.error("已点击发布，但接口未查到该回答，按失败处理：%s", qurl)
+            return False
     except Exception as exc:  # noqa: BLE001
         log.error("发布失败：%s", exc)
         return False
+
+
+def _my_answer_url(page, qid: str) -> str | None:
+    """返回本账号在该问题下的已发布回答 URL。"""
+    me = page.evaluate("fetch('/api/v4/me',{credentials:'include'}).then(r=>r.json())")
+    token = me.get("url_token")
+    offset = 0
+    while offset < 3000:
+        url = f"/api/v4/members/{token}/answers?limit=20&offset={offset}"
+        resp = page.evaluate("(u)=>fetch(u,{credentials:'include'}).then(r=>r.json())", url)
+        data = resp.get("data") or []
+        for item in data:
+            if str((item.get("question") or {}).get("id")) == qid:
+                return f"https://www.zhihu.com/question/{qid}/answer/{item['id']}"
+        if not data or (resp.get("paging") or {}).get("is_end"):
+            return None
+        offset += 20
+    return None
 
 
 def publish_saved_zhihu_draft(lead: Lead) -> bool:
