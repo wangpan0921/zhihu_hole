@@ -110,12 +110,26 @@ def run(*, max_leads: int = 1, backfill: bool = True) -> list[Lead]:
             )
             log.info("已回填推荐文案：%s", url)
 
-    leads = search_zhihu_leads(
-        config.SEARCH_KEYWORDS,
-        max_leads,
-        exclude_urls=set(existing),
-        search_round=0,
-    )
+    # 排除表里已有的链接和本账号已回答的问题；不够数时多搜几轮（加深滚动）
+    leads: list[Lead] = []
+    seen = set(existing)
+    for search_round in range(3):
+        need = max_leads - len(leads)
+        if need <= 0:
+            break
+        batch = search_zhihu_leads(
+            config.SEARCH_KEYWORDS,
+            need,
+            exclude_urls=seen,
+            search_round=search_round,
+            skip_answered=True,
+        )
+        for lead in batch:
+            if lead.url not in seen:
+                seen.add(lead.url)
+                leads.append(lead)
+    if len(leads) < max_leads:
+        log.warning("仅找到 %d/%d 条未回答的新问题", len(leads), max_leads)
     today = dt.date.today()
     for lead in leads:
         lead.comment = _plain_recommendation(lead.title)

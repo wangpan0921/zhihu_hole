@@ -82,6 +82,7 @@ def search_zhihu_leads(
     *,
     exclude_urls: set[str] | None = None,
     search_round: int = 0,
+    skip_answered: bool = False,
 ) -> list[Lead]:
     """用持久化 profile（拟人化）打开知乎搜索页，抓取问题链接作为推广线索。
 
@@ -104,6 +105,13 @@ def search_zhihu_leads(
                 "知乎未登录（持久化 profile 内无登录态）。请先在本机扫码：\n"
                 "  python -m fc_promotion.login_cli zhihu"
             )
+        if skip_answered:
+            # 本账号已回答过的问题不能再答，提前排除，避免写进待审核表后发布时才发现
+            published = _zhihu_published_qids(page)
+            if published is None:
+                raise RuntimeError("读取本账号已发布回答失败，无法排除已回答问题，停止收集")
+            exclude_urls |= {f"https://www.zhihu.com/question/{q}" for q in published}
+            log.info("已排除本账号已回答的问题 %d 个", len(published))
         scroll_rounds = min(2 + search_round, 8)
         for kw in keywords:
             if len(leads) >= limit:
