@@ -96,6 +96,9 @@ def main(argv: list[str] | None = None) -> int:
                 fields={config.FIELD_PUBLISHED: "是"},
             )
             print(f"已发布并回写：{lead.url}")
+            if "不一致" in (lead.status or ""):
+                failed += 1
+                print(f"警告：回答已发布但正文与审核文案不一致，请人工检查：{lead.url}", file=sys.stderr)
         else:
             failed += 1
             print(f"发布失败：{lead.url}", file=sys.stderr)

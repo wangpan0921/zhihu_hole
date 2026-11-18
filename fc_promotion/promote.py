@@ -398,20 +398,46 @@ def _upload_zhihu_images(page, editor) -> None:
         log.info("知乎推广图片已上传：%s", path.name)
 
 
-def _zhihu_answer_ok(page, qid: str) -> tuple[bool, str]:
-    """读取本账号在该问题下的回答正文，校验邀请码/保活各 1 次、图片数等于素材数。"""
+def _norm_answer_text(value: str) -> str:
+    """去掉 URL 与所有空白，用于比较审核文案与知乎正文（知乎会把链接改写成卡片/短链）。"""
+    value = re.sub(r"https?://\S*", "", value)
+    return re.sub(r"\s+", "", value)
+
+
+def _zhihu_answer_ok(page, qid: str, expected_text: str | None = None) -> tuple[bool, str]:
+    """读取本账号在该问题下的回答正文并校验。
+
+    有 expected_text（审核通过的推荐文案）时：文案里每段非空文字都必须在正文中出现且仅出现 1 次，
+    邀请码 1 次，图片数等于素材数。审核时改了措辞（如去掉"强烈"）也能正确判断。
+    没有 expected_text 时退回旧规则：邀请码、保活提醒各 1 次。
+    """
+    import html as _html
     try:
         me = page.evaluate("fetch('/api/v4/me',{credentials:'include'}).then(r=>r.json())")
         token = me.get("url_token")
         url = f"/api/v4/members/{token}/answers?limit=20&offset=0&sort_by=created&include=data[*].content"
         resp = page.evaluate("(u)=>fetch(u,{credentials:'include'}).then(r=>r.json())", url)
         for item in resp.get("data") or []:
-            if str((item.get("question") or {}).get("id")) == qid:
-                c = item.get("content") or ""
-                inv, keep, figs = c.count(config.INVITE_CODE), c.count(config.KEEP_ALIVE_REMINDER), c.count("<figure")
-                need = len(config.PROMO_IMAGE_REFS)
+            if str((item.get("question") or {}).get("id")) != qid:
+                continue
+            c = item.get("content") or ""
+            inv, figs = c.count(config.INVITE_CODE), c.count("<figure")
+            need = len(config.PROMO_IMAGE_REFS)
+            if not expected_text:
+                keep = c.count(config.KEEP_ALIVE_REMINDER)
                 return (inv == 1 and keep == 1 and figs == need,
                         f"邀请码{inv}次 保活{keep}次 图片{figs}/{need}")
+            paragraphs = [_html.unescape(re.sub(r"<[^>]+>", "", p)) for p in re.findall(r"<p[^>]*>.*?</p>", c, re.S)]
+            published = "\n".join(_norm_answer_text(p) for p in paragraphs)
+            body = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", expected_text)
+            lines = [_norm_answer_text(x) for x in body.splitlines()]
+            lines = [x for x in lines if x]
+            bad = [x for x in lines if published.count(x) != 1]
+            ok = inv == 1 and figs == need and not bad
+            detail = f"文案{len(lines) - len(bad)}/{len(lines)}段一致 邀请码{inv}次 图片{figs}/{need}"
+            if bad:
+                detail += f" 不一致：{bad[0][:20]}…"
+            return ok, detail
         return False, "未找到该问题的回答"
     except Exception as exc:  # noqa: BLE001
         return False, f"读取失败：{exc}"
@@ -562,16 +588,23 @@ def post_comment_zhihu(lead: Lead, *, draft: bool = False, force_edit: bool = Fa
             # 发布后用接口核实：问题确实出现在本账号已发布回答里才算成功
             global _PUBLISHED_QIDS
             qid = qurl.rstrip("/").split("/")[-1]
+            found, detail = False, ""
             for _ in range(8):
                 hb.human_pause(2.5, 3.5)
                 _PUBLISHED_QIDS = None
                 published = _zhihu_published_qids(page)
                 if published and qid in published:
-                    ok, detail = _zhihu_answer_ok(page, qid)
+                    found = True
+                    ok, detail = _zhihu_answer_ok(page, qid, expected_text=text)
                     if ok:
                         log.info("已提交回答并核实发布成功（%s）：%s", detail, qurl)
                         return True
                     log.warning("回答已发布但正文校验未通过（%s），继续等待：%s", detail, qurl)
+            if found:
+                # 回答已经公开，必须如实记为已发布，避免表里与知乎不一致；正文问题单独报错供人工检查
+                lead.status = "已发布（正文与审核文案不一致）"
+                log.error("回答已发布，但正文与审核文案不一致（%s），请人工检查：%s", detail, qurl)
+                return True
             log.error("已点击发布，但接口未查到该回答，按失败处理：%s", qurl)
             return False
     except Exception as exc:  # noqa: BLE001
