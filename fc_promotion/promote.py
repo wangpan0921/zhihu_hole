@@ -548,16 +548,30 @@ def post_comment_zhihu(lead: Lead, *, draft: bool = False, force_edit: bool = Fa
                 return False
             # 知乎固定顶栏偶尔会拦截常规点击；按钮已通过可见性检查后强制点击，
             # 避免把真实可写的问题误判为发布失败。
-            write_btn.click(force=True)
-            hb.human_pause(1.5, 3)
-
-            # 2) 定位编辑器并逐字输入
+            # 点击后最多等 15 秒让编辑器出现；仍未出现则重新定位入口再点一次，仍失败才放弃。
             editor = None
-            for sel in (".public-DraftEditor-content", "div[contenteditable='true']", ".Editable-content"):
-                loc = page.locator(sel).first
-                if loc.count() > 0:
-                    editor = loc
+            for attempt in (1, 2):
+                if write_btn is not None:
+                    write_btn.click(force=True)
+                    hb.human_pause(1.5, 3)
+                for _ in range(30):
+                    for sel in (".public-DraftEditor-content", "div[contenteditable='true']", ".Editable-content"):
+                        loc = page.locator(sel).first
+                        if loc.count() > 0:
+                            editor = loc
+                            break
+                    if editor is not None:
+                        break
+                    page.wait_for_timeout(500)
+                if editor is not None:
                     break
+                log.warning("第 %d 次点击后 15 秒内未出现回答编辑器：%s", attempt, qurl)
+                write_btn = None
+                for sel in open_candidates:
+                    loc = page.locator(sel).first
+                    if loc.count() > 0:
+                        write_btn = loc
+                        break
             if editor is None:
                 log.error("未找到回答编辑器，跳过：%s", qurl)
                 return False
